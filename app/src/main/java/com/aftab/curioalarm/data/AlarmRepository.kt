@@ -130,6 +130,7 @@ class AlarmRepository(context: Context) {
         put("gradualVolume", gradualVolume)
         put("scheduledAt", scheduledAt)
         put("lastFiredAt", lastFiredAt)
+        put("hardMode", hardMode)
     }
 
     private fun JSONObject.toAlarm(): Alarm {
@@ -154,7 +155,8 @@ class AlarmRepository(context: Context) {
             vibrate = optBoolean("vibrate", true),
             gradualVolume = optBoolean("gradualVolume", true),
             scheduledAt = optLong("scheduledAt", 0L),
-            lastFiredAt = optLong("lastFiredAt", 0L)
+            lastFiredAt = optLong("lastFiredAt", 0L),
+            hardMode = optBoolean("hardMode", false)
         )
     }
 
