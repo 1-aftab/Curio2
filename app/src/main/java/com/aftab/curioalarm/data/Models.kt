@@ -31,7 +31,8 @@ data class Alarm(
     val vibrate: Boolean = true,
     val gradualVolume: Boolean = true,
     val scheduledAt: Long = 0L,
-    val lastFiredAt: Long = 0L
+    val lastFiredAt: Long = 0L,
+    val hardMode: Boolean = false
 ) {
     val isRepeating: Boolean get() = days.isNotEmpty()
 }
