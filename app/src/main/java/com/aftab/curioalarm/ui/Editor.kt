@@ -79,6 +79,7 @@ fun AlarmEditor(
     var difficulty by remember { mutableStateOf(initial.difficulty) }
     var vibrate by remember { mutableStateOf(initial.vibrate) }
     var gradual by remember { mutableStateOf(initial.gradualVolume) }
+    var hardMode by remember { mutableStateOf(initial.hardMode) }
     var soundPath by remember { mutableStateOf(initial.soundPath) }
     var soundName by remember { mutableStateOf(initial.soundName) }
     var confirmDelete by remember { mutableStateOf(false) }
@@ -142,7 +143,8 @@ fun AlarmEditor(
                             challenges = challenges,
                             difficulty = difficulty,
                             vibrate = vibrate,
-                            gradualVolume = gradual
+                            gradualVolume = gradual,
+                            hardMode = hardMode
                         )
                     )
                 }) { Text("Save", color = Palette.Silver, fontWeight = FontWeight.Medium) }
@@ -289,6 +291,18 @@ fun AlarmEditor(
                             )
                         }
                     }
+                }
+
+                // ---- mode
+                Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                    SectionLabel("Mode")
+                    ToggleRow("Hard mode", hardMode) { hardMode = it }
+                    Text(
+                        if (hardMode) "Opens the task screen straight away and tries to lock the phone to it until the task is done"
+                        else "Normal: the alarm rings with the task screen as usual",
+                        color = Palette.Muted,
+                        fontSize = 12.sp
+                    )
                 }
 
                 if (!isNew) {
