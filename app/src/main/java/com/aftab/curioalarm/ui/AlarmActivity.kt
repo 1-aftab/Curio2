@@ -1,5 +1,6 @@
 package com.aftab.curioalarm.ui
 
+import android.app.admin.DevicePolicyManager
 import android.os.Build
 import android.os.Bundle
 import android.view.WindowManager
@@ -66,6 +67,30 @@ import kotlinx.coroutines.delay
 /** Full-screen ringing UI. The alarm only stops after the challenge is solved. */
 class AlarmActivity : ComponentActivity() {
 
+    private var lockTaskStarted = false
+
+    /**
+     * Hard mode only. Asks Android to pin this screen. On an ordinary phone this is screen pinning: it only
+     * works if "App pinning" is enabled in Settings, and Android may ask the user to confirm.
+     * If the app was allowlisted by a device owner, it locks without a prompt. If neither
+     * applies, nothing happens. Users can always exit pinning with the system gesture.
+     */
+    private fun tryLockTask() {
+        try {
+            startLockTask()
+            lockTaskStarted = true
+        } catch (_: Exception) {
+        }
+    }
+
+    override fun onDestroy() {
+        if (lockTaskStarted) {
+            runCatching { stopLockTask() }
+            lockTaskStarted = false
+        }
+        super.onDestroy()
+    }
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O_MR1) {
@@ -88,6 +113,8 @@ class AlarmActivity : ComponentActivity() {
             finish()
             return
         }
+        // Hard mode only: pin the task screen where Android allows it.
+        if (Graph.repo.get(AlarmService.ringing.value ?: -1)?.hardMode == true) tryLockTask()
 
         setContent {
             CurioTheme {
