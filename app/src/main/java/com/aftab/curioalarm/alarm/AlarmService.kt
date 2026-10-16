@@ -86,6 +86,7 @@ class AlarmService : Service() {
         acquireWakeLock()
         startSound(alarm)
         startVibration(alarm)
+        if (alarm?.hardMode == true) showAlarmScreen(id)
         return START_REDELIVER_INTENT
     }
 
@@ -93,6 +94,23 @@ class AlarmService : Service() {
         stopPlayback()
         _ringing.value = null
         super.onDestroy()
+    }
+
+    /**
+     * Opens the task screen right away. Android only allows this when the app is already visible
+     * (or briefly after an alarm fires); otherwise the call is ignored and the full-screen
+     * notification posted by [postForeground] remains the supported fallback.
+     */
+    private fun showAlarmScreen(id: Int) {
+        try {
+            startActivity(
+                Intent(this, AlarmActivity::class.java)
+                    .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP)
+                    .putExtra(EXTRA_ALARM_ID, id)
+            )
+        } catch (_: Exception) {
+            // Background launch not permitted: the full-screen intent / heads-up notification covers it.
+        }
     }
 
     // ---------------------------------------------------------------- notification
