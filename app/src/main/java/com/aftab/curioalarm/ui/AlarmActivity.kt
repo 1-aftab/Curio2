@@ -83,11 +83,16 @@ class AlarmActivity : ComponentActivity() {
         }
     }
 
-    override fun onDestroy() {
+    /** Releases the pin as soon as the alarm is over (safe to call more than once). */
+    private fun releaseLockTask() {
         if (lockTaskStarted) {
             runCatching { stopLockTask() }
             lockTaskStarted = false
         }
+    }
+
+    override fun onDestroy() {
+        releaseLockTask()
         super.onDestroy()
     }
 
@@ -119,13 +124,14 @@ class AlarmActivity : ComponentActivity() {
         setContent {
             CurioTheme {
                 val ringingId by AlarmService.ringing.collectAsState()
-                LaunchedEffect(ringingId) { if (ringingId == null) finish() }
+                LaunchedEffect(ringingId) { if (ringingId == null) { releaseLockTask(); finish() } }
                 ringingId?.let { id ->
                     key(id) {
                         RingScreen(
                             alarm = Graph.repo.get(id),
                             onSolved = {
                                 AlarmService.dismiss(applicationContext)
+                                releaseLockTask()
                                 finish()
                             }
                         )
