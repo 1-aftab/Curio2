@@ -296,7 +296,7 @@ fun AlarmEditor(
                 // ---- mode
                 Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
                     SectionLabel("Mode")
-                    ToggleRow("Hard mode", hardMode) { hardMode = it }
+                    ToggleRow("Kiosk mode", hardMode) { hardMode = it }
                     Text(
                         if (hardMode) "Opens the task screen straight away and tries to lock the phone to it until the task is done"
                         else "Normal: the alarm rings with the task screen as usual",
