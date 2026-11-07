@@ -37,6 +37,7 @@ import kotlinx.coroutines.flow.asStateFlow
 /**
  * Foreground service that owns the audio, vibration and notification of a ringing alarm.
  * It only stops when [dismiss] is called (after the user solves the challenge).
+ * If several alarms fire together they are queued and dismissed one after another.
  */
 class AlarmService : Service() {
 
@@ -47,6 +48,8 @@ class AlarmService : Service() {
     private val handler = Handler(Looper.getMainLooper())
     private var currentAlarmId = -1
     private var triedFallback = false
+    private var ramping = false
+    private val queue = ArrayDeque<Int>()
 
     private val alarmAttributes: AudioAttributes = AudioAttributes.Builder()
         .setUsage(AudioAttributes.USAGE_ALARM)
@@ -58,7 +61,7 @@ class AlarmService : Service() {
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
         when (intent?.action) {
             ACTION_DISMISS -> {
-                stopRinging()
+                dismissCurrent()
                 return START_NOT_STICKY
             }
             ACTION_REPOST -> {
@@ -74,24 +77,74 @@ class AlarmService : Service() {
         val id = intent?.getIntExtra(EXTRA_ALARM_ID, -1) ?: -1
         val alarm = Graph.repo.get(id)
 
-        // startForegroundService() requires startForeground() every time, even for duplicates.
+        // Phantom trigger: the alarm was deleted (or the intent is malformed / redelivered
+        // without data). Never ring for a non-existent alarm — it could never be dismissed
+        // from Home and would ring forever.
+        if (alarm == null) {
+            if (currentAlarmId >= 0) {
+                // Keep the current alarm ringing; still re-promote to satisfy the
+                // startForegroundService() contract for this start.
+                postForeground(Graph.repo.get(currentAlarmId), currentAlarmId)
+            } else {
+                // Promote first, then stop — some OEM builds crash otherwise even when
+                // stopSelf() is immediate.
+                postForeground(null, -1)
+                _ringing.value = null
+                ServiceCompat.stopForeground(this, ServiceCompat.STOP_FOREGROUND_REMOVE)
+                stopSelf()
+            }
+            return START_NOT_STICKY
+        }
+
+        // Something is already ringing.
+        if (currentAlarmId >= 0 && _ringing.value == currentAlarmId) {
+            // A *different* alarm: queue it instead of cutting the current one off.
+            // (Cutting it off silently lost the first alarm — its challenge was never shown.)
+            // A duplicate of the current one: never queue it, or it would ring again on dismiss.
+            if (id != currentAlarmId && id !in queue) queue.addLast(id)
+            // re-promote with the *current* alarm's info: startForegroundService() requires
+            // startForeground() on every start, even for duplicates and queued alarms.
+            postForeground(Graph.repo.get(currentAlarmId), currentAlarmId)
+            return START_REDELIVER_INTENT
+        }
+
+        // startForegroundService() requires startForeground() every time.
         postForeground(alarm, id)
+        beginRinging(alarm)
+        return START_REDELIVER_INTENT
+    }
 
-        // Duplicate trigger for the alarm that is already ringing: never start a second player.
-        if (currentAlarmId == id && _ringing.value == id) return START_REDELIVER_INTENT
-
+    private fun beginRinging(alarm: Alarm) {
         stopPlayback()
-        currentAlarmId = id
-        _ringing.value = id
+        currentAlarmId = alarm.id
+        _ringing.value = alarm.id
         acquireWakeLock()
         startSound(alarm)
         startVibration(alarm)
-        if (alarm?.hardMode == true) showAlarmScreen(id)
-        return START_REDELIVER_INTENT
+        if (alarm.hardMode) showAlarmScreen(alarm.id)
+    }
+
+    /** Solves the current alarm; rings the next queued one, or stops when the queue is empty. */
+    private fun dismissCurrent() {
+        stopPlayback()
+        while (queue.isNotEmpty()) {
+            val next = Graph.repo.get(queue.removeFirst())
+            if (next != null) {
+                postForeground(next, next.id)
+                beginRinging(next)
+                return
+            }
+        }
+        currentAlarmId = -1
+        _ringing.value = null
+        ServiceCompat.stopForeground(this, ServiceCompat.STOP_FOREGROUND_REMOVE)
+        stopSelf()
     }
 
     override fun onDestroy() {
         stopPlayback()
+        queue.clear()
+        currentAlarmId = -1
         _ringing.value = null
         super.onDestroy()
     }
@@ -172,12 +225,13 @@ class AlarmService : Service() {
             if (!triedFallback) {
                 triedFallback = true
                 playerSwap(prepareFallback())
+                if (alarm?.gradualVolume != false) rampVolume() else player?.setVolume(1f, 1f)
             }
             true
         }
         player = mp
         mp.start()
-        if (alarm?.gradualVolume != false) rampVolume(mp) else mp.setVolume(1f, 1f)
+        if (alarm?.gradualVolume != false) rampVolume() else mp.setVolume(1f, 1f)
     }
 
     private fun playerSwap(next: MediaPlayer?) {
@@ -215,16 +269,22 @@ class AlarmService : Service() {
         }
     }
 
-    private fun rampVolume(mp: MediaPlayer) {
+    /**
+     * Reads the *current* player on every tick: after an error-fallback swap the ramp
+     * continues on the new player instead of poking a released one.
+     */
+    private fun rampVolume() {
+        if (ramping) return
+        ramping = true
         var step = 0
         val steps = 40  // 40 * 750 ms = 30 s
-        mp.setVolume(0.05f, 0.05f)
+        runCatching { player?.setVolume(0.05f, 0.05f) }
         val tick = object : Runnable {
             override fun run() {
                 step++
                 val v = (0.05f + 0.95f * step / steps).coerceAtMost(1f)
-                runCatching { mp.setVolume(v, v) }
-                if (step < steps) handler.postDelayed(this, 750)
+                runCatching { player?.setVolume(v, v) }
+                if (step < steps) handler.postDelayed(this, 750) else ramping = false
             }
         }
         handler.postDelayed(tick, 750)
@@ -285,6 +345,7 @@ class AlarmService : Service() {
 
     private fun stopPlayback() {
         handler.removeCallbacksAndMessages(null)
+        ramping = false
         player?.let { runCatching { it.stop() }; runCatching { it.release() } }
         player = null
         runCatching { vibrator?.cancel() }
@@ -297,14 +358,6 @@ class AlarmService : Service() {
         focusRequest = null
         runCatching { if (wakeLock?.isHeld == true) wakeLock?.release() }
         wakeLock = null
-    }
-
-    private fun stopRinging() {
-        stopPlayback()
-        currentAlarmId = -1
-        _ringing.value = null
-        ServiceCompat.stopForeground(this, ServiceCompat.STOP_FOREGROUND_REMOVE)
-        stopSelf()
     }
 
     companion object {
@@ -327,10 +380,14 @@ class AlarmService : Service() {
         }
 
         fun dismiss(context: Context) {
-            _ringing.value = null   // UI reacts immediately; the service then stops audio + notification
-            context.startService(
-                Intent(context, AlarmService::class.java).setAction(ACTION_DISMISS)
-            )
+            // The service updates [ringing] itself — to the next queued alarm, or to null.
+            // If delivery fails the alarm is still ringing, so keep the state (and the
+            // challenge screen) up rather than pretending it was dismissed.
+            runCatching {
+                context.startService(
+                    Intent(context, AlarmService::class.java).setAction(ACTION_DISMISS)
+                )
+            }
         }
     }
 }

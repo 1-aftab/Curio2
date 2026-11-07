@@ -79,7 +79,8 @@ object ChallengeEngine {
                 1 -> {
                     val a = r.nextInt(12, 60)
                     val b = r.nextInt(12, 60)
-                    val c = r.nextInt(5, 30)
+                    // keep the result positive: numeric alarm keypads have no minus key
+                    val c = r.nextInt(5, (a + b).coerceAtMost(30))
                     Puzzle.Math("$a + $b − $c", a + b - c)
                 }
                 else -> {

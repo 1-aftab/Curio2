@@ -1,6 +1,5 @@
 package com.aftab.curioalarm.ui
 
-import android.app.admin.DevicePolicyManager
 import android.os.Build
 import android.os.Bundle
 import android.view.WindowManager
@@ -16,10 +15,10 @@ import androidx.compose.animation.core.infiniteRepeatable
 import androidx.compose.animation.core.rememberInfiniteTransition
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Canvas
-import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -35,12 +34,12 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.key
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.produceState
-import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
@@ -49,7 +48,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontFamily
-import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.aftab.curioalarm.Graph
@@ -70,12 +68,13 @@ class AlarmActivity : ComponentActivity() {
     private var lockTaskStarted = false
 
     /**
-     * Hard mode only. Asks Android to pin this screen. On an ordinary phone this is screen pinning: it only
-     * works if "App pinning" is enabled in Settings, and Android may ask the user to confirm.
-     * If the app was allowlisted by a device owner, it locks without a prompt. If neither
-     * applies, nothing happens. Users can always exit pinning with the system gesture.
+     * Kiosk mode only. Asks Android to pin this screen. On an ordinary phone this is screen
+     * pinning: it only works if "App pinning" is enabled in Settings, and Android may ask the
+     * user to confirm. If the app was allowlisted by a device owner, it locks without a prompt.
+     * If neither applies, nothing happens. Users can always exit pinning with the system gesture.
      */
     private fun tryLockTask() {
+        if (lockTaskStarted) return
         try {
             startLockTask()
             lockTaskStarted = true
@@ -118,22 +117,28 @@ class AlarmActivity : ComponentActivity() {
             finish()
             return
         }
-        // Hard mode only: pin the task screen where Android allows it.
-        if (Graph.repo.get(AlarmService.ringing.value ?: -1)?.hardMode == true) tryLockTask()
 
         setContent {
             CurioTheme {
                 val ringingId by AlarmService.ringing.collectAsState()
-                LaunchedEffect(ringingId) { if (ringingId == null) { releaseLockTask(); finish() } }
+                // React to every transition: dismissed → finish; next queued alarm → new
+                // challenge; kiosk flag of the *current* alarm decides pinning.
+                LaunchedEffect(ringingId) {
+                    val id = ringingId
+                    if (id == null) {
+                        releaseLockTask()
+                        finish()
+                    } else if (Graph.repo.get(id)?.hardMode == true) {
+                        tryLockTask()
+                    } else {
+                        releaseLockTask()
+                    }
+                }
                 ringingId?.let { id ->
                     key(id) {
                         RingScreen(
                             alarm = Graph.repo.get(id),
-                            onSolved = {
-                                AlarmService.dismiss(applicationContext)
-                                releaseLockTask()
-                                finish()
-                            }
+                            onSolved = { AlarmService.dismiss(applicationContext) }
                         )
                     }
                 }
@@ -159,12 +164,12 @@ private fun RingScreen(alarm: Alarm?, onSolved: () -> Unit) {
 
     val clock by produceState(LocalTime.now()) {
         while (true) {
-            delay(5_000)
+            delay(1_000)
             value = LocalTime.now()
         }
     }
 
-    Surface(color = Palette.Black, modifier = Modifier.fillMaxSize()) {
+    Surface(color = Palette.Ink, modifier = Modifier.fillMaxSize()) {
         Column(
             Modifier
                 .fillMaxSize()
@@ -174,27 +179,33 @@ private fun RingScreen(alarm: Alarm?, onSolved: () -> Unit) {
                 .padding(horizontal = 24.dp, vertical = 16.dp),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
-            Box(Modifier.size(210.dp), contentAlignment = Alignment.Center) {
+            Box(Modifier.size(220.dp), contentAlignment = Alignment.Center) {
                 PulseRings()
                 Column(horizontalAlignment = Alignment.CenterHorizontally) {
                     Text(
                         DateTimeFormatter.ofLocalizedTime(FormatStyle.SHORT).format(clock),
                         color = Palette.Text,
-                        fontSize = 34.sp,
-                        fontWeight = FontWeight.Light
+                        fontSize = 38.sp,
+                        fontFamily = FontFamily.Serif
                     )
                     Text(
                         alarm?.label?.ifBlank { null } ?: "Alarm",
-                        color = Palette.SilverDim,
+                        color = Palette.AccentDim,
                         fontSize = 14.sp,
-                        fontFamily = FontFamily.Serif
+                        letterSpacing = 0.4.sp
                     )
                 }
             }
-            Spacer(Modifier.height(12.dp))
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                MetaChip(type.title)
+                MetaChip(difficulty.title)
+                if (round > 0) MetaChip("Attempt ${round + 1}")
+            }
+            Spacer(Modifier.height(16.dp))
             Surface(
                 shape = RoundedCornerShape(28.dp),
                 color = Palette.Surface,
+                border = androidx.compose.foundation.BorderStroke(1.dp, Palette.Outline),
                 modifier = Modifier.fillMaxWidth()
             ) {
                 Box(Modifier.padding(24.dp)) {
@@ -228,7 +239,7 @@ private fun PulseRings() {
         for (k in 0..1) {
             val p = (t + k * 0.5f) % 1f
             drawCircle(
-                color = Palette.Silver.copy(alpha = (1f - p) * 0.35f),
+                color = Palette.Accent.copy(alpha = (1f - p) * 0.35f),
                 radius = size.minDimension / 2f * (0.55f + 0.45f * p),
                 style = Stroke(width = 1.5.dp.toPx())
             )

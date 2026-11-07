@@ -140,10 +140,16 @@ class AlarmRepository(context: Context) {
         val challenges = (0 until chArray.length()).mapNotNull {
             runCatching { ChallengeType.valueOf(chArray.getString(it)) }.getOrNull()
         }.toSet().ifEmpty { setOf(ChallengeType.MATH) }
+        val id = getInt("id")
+        val hour = getInt("hour")
+        val minute = getInt("minute")
+        // Reject corrupt rows here; readAll() skips thrown entries instead of crashing
+        // later inside LocalTime.of() when scheduling or formatting.
+        require(id > 0 && hour in 0..23 && minute in 0..59) { "corrupt alarm row" }
         return Alarm(
-            id = getInt("id"),
-            hour = getInt("hour"),
-            minute = getInt("minute"),
+            id = id,
+            hour = hour,
+            minute = minute,
             label = optString("label", ""),
             enabled = optBoolean("enabled", false),
             days = days,

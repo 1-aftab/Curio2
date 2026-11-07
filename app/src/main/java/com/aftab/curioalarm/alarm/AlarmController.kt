@@ -11,18 +11,22 @@ class AlarmController(
     private val scheduler: AlarmScheduler
 ) {
 
+    @Synchronized
     fun save(alarm: Alarm): Alarm = applySchedule(repo.upsert(alarm))
 
+    @Synchronized
     fun setEnabled(id: Int, enabled: Boolean) {
         val alarm = repo.get(id) ?: return
         applySchedule(repo.upsert(alarm.copy(enabled = enabled)))
     }
 
+    @Synchronized
     fun delete(id: Int) {
         repo.get(id)?.let { scheduler.cancel(it) }
         repo.delete(id)
     }
 
+    @Synchronized
     fun restorePresets() = repo.addPresets()
 
     /**

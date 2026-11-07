@@ -15,7 +15,6 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.offset
-import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardActions
@@ -96,12 +95,15 @@ fun MathChallenge(puzzle: Puzzle.Math, onSolved: () -> Unit) {
             puzzle.question,
             color = Palette.Text,
             fontSize = 40.sp,
-            fontWeight = FontWeight.Light,
+            fontFamily = FontFamily.Serif,
             textAlign = TextAlign.Center
         )
         OutlinedTextField(
             value = input,
-            onValueChange = { v -> input = v.filter { it.isDigit() || it == '-' }.take(7); wrong = false },
+            onValueChange = { v ->
+                input = v.filterIndexed { i, c -> c.isDigit() || (c == '-' && i == 0) }.take(7)
+                wrong = false
+            },
             placeholder = { Text("Your answer", color = Palette.Muted) },
             singleLine = true,
             textStyle = androidx.compose.ui.text.TextStyle(fontSize = 24.sp, textAlign = TextAlign.Center),
@@ -111,8 +113,8 @@ fun MathChallenge(puzzle: Puzzle.Math, onSolved: () -> Unit) {
             keyboardActions = KeyboardActions(onDone = { submit() }),
             modifier = Modifier.fillMaxWidth()
         )
-        if (wrong) Text("Incorrect. The alarm keeps ringing.", color = Palette.Silver, fontSize = 13.sp)
-        SilverButton("Confirm", onClick = { submit() }, modifier = Modifier.fillMaxWidth(), enabled = input.isNotBlank())
+        if (wrong) Text("Incorrect. The alarm keeps ringing.", color = Palette.Danger, fontSize = 13.sp)
+        PrimaryButton("Confirm", onClick = { submit() }, modifier = Modifier.fillMaxWidth(), enabled = input.isNotBlank())
     }
 }
 
@@ -162,8 +164,8 @@ fun PhraseChallenge(puzzle: Puzzle.Phrase, onSolved: () -> Unit) {
             keyboardActions = KeyboardActions(onDone = { submit() }),
             modifier = Modifier.fillMaxWidth()
         )
-        if (wrong) Text("That doesn't match. Check every word.", color = Palette.Silver, fontSize = 13.sp)
-        SilverButton("Confirm", onClick = { submit() }, modifier = Modifier.fillMaxWidth(), enabled = input.isNotBlank())
+        if (wrong) Text("That doesn't match. Check every word.", color = Palette.Danger, fontSize = 13.sp)
+        PrimaryButton("Confirm", onClick = { submit() }, modifier = Modifier.fillMaxWidth(), enabled = input.isNotBlank())
     }
 }
 
@@ -190,7 +192,7 @@ fun MemoryChallenge(puzzle: Puzzle.Memory, onSolved: () -> Unit, onWrong: () -> 
         if (showing) {
             SectionLabel("Memorize the sequence")
             if (puzzle.attempt > 0) {
-                Text("Incorrect. Here is a new sequence.", color = Palette.Silver, fontSize = 13.sp)
+                Text("Incorrect. Here is a new sequence.", color = Palette.Danger, fontSize = 13.sp)
             }
             Text(
                 puzzle.sequence.joinToString("  "),
@@ -204,7 +206,7 @@ fun MemoryChallenge(puzzle: Puzzle.Memory, onSolved: () -> Unit, onWrong: () -> 
                 Modifier.fillMaxWidth().height(3.dp).clip(RoundedCornerShape(2.dp)).background(Palette.SurfaceHigh)
             ) {
                 Box(
-                    Modifier.fillMaxWidth(progress.value.coerceIn(0f, 1f)).height(3.dp).background(Palette.Silver)
+                    Modifier.fillMaxWidth(progress.value.coerceIn(0f, 1f)).height(3.dp).background(Palette.Accent)
                 )
             }
             GhostButton("I'm ready", onClick = { showing = false }, modifier = Modifier.fillMaxWidth())
@@ -260,7 +262,7 @@ private fun PadKey(label: String, modifier: Modifier, onClick: () -> Unit) {
         modifier
             .height(58.dp)
             .clip(RoundedCornerShape(18.dp))
-            .background(Palette.Surface)
+            .background(Palette.SurfaceHigh)
             .border(1.dp, Palette.Outline2, RoundedCornerShape(18.dp))
             .clickable(onClick = onClick),
         contentAlignment = Alignment.Center
