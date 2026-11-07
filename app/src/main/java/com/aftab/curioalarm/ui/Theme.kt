@@ -1,94 +1,174 @@
 package com.aftab.curioalarm.ui
 
+import android.app.Activity
+import android.content.Context
+import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Shapes
 import androidx.compose.material3.Typography
 import androidx.compose.material3.darkColorScheme
+import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.Immutable
+import androidx.compose.runtime.SideEffect
+import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.text.font.FontFamily
+import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.core.view.WindowCompat
 
-/**
- * "Nightstand" palette: deep ink blues with a warm champagne accent.
- * Dark-only by design — this app is mostly used in the dark.
- */
-object Palette {
-    val Ink = Color(0xFF0A0D13)          // page background
-    val Surface = Color(0xFF10151E)      // card
-    val SurfaceHigh = Color(0xFF171E2A)  // raised card / inputs
-    val Outline = Color(0xFF1E2634)      // hairline borders
-    val Outline2 = Color(0xFF2C3648)     // stronger borders
-    val Text = Color(0xFFEDF1F7)         // primary text
-    val Muted = Color(0xFF8C97AB)        // secondary text
-    val Accent = Color(0xFFE3C27E)       // champagne gold
-    val AccentDim = Color(0xFFB99A5B)    // quieter gold
-    val AccentSoft = Color(0xFF2B2517)   // warm tinted container
-    val Danger = Color(0xFFE57A7A)       // soft red for destructive / error states
+/** Appearance choice, persisted in SharedPreferences. */
+enum class ThemeMode(val title: String, val subtitle: String) {
+    SYSTEM("System", "Follow the device appearance"),
+    LIGHT("Light", "White background, black controls"),
+    DARK("Dark", "Black background, white controls");
+
+    companion object {
+        fun parse(name: String?): ThemeMode = entries.firstOrNull { it.name == name } ?: SYSTEM
+    }
 }
 
-private val CurioScheme = darkColorScheme(
-    primary = Palette.Accent,
-    onPrimary = Palette.Ink,
-    primaryContainer = Palette.AccentSoft,
-    onPrimaryContainer = Palette.Accent,
-    secondary = Palette.AccentDim,
-    onSecondary = Palette.Ink,
-    secondaryContainer = Palette.SurfaceHigh,
-    onSecondaryContainer = Palette.Text,
-    tertiary = Palette.AccentDim,
-    onTertiary = Palette.Ink,
-    tertiaryContainer = Palette.AccentSoft,
-    onTertiaryContainer = Palette.Accent,
-    background = Palette.Ink,
-    onBackground = Palette.Text,
-    surface = Palette.Surface,
-    onSurface = Palette.Text,
-    surfaceVariant = Palette.SurfaceHigh,
-    onSurfaceVariant = Palette.Muted,
-    surfaceContainerLowest = Palette.Ink,
-    surfaceContainerLow = Palette.Surface,
-    surfaceContainer = Palette.Surface,
-    surfaceContainerHigh = Palette.SurfaceHigh,
-    surfaceContainerHighest = Palette.SurfaceHigh,
-    outline = Palette.Outline2,
-    outlineVariant = Palette.Outline,
-    error = Palette.Danger,
-    onError = Palette.Ink
+object ThemePrefs {
+    private const val FILE = "curio_ui"
+    private const val KEY = "theme_mode"
+
+    fun load(context: Context): ThemeMode =
+        ThemeMode.parse(context.getSharedPreferences(FILE, Context.MODE_PRIVATE).getString(KEY, null))
+
+    fun save(context: Context, mode: ThemeMode) {
+        context.getSharedPreferences(FILE, Context.MODE_PRIVATE).edit().putString(KEY, mode.name).apply()
+    }
+}
+
+/**
+ * Monochrome design tokens. Two fixed palettes — no tinted accents, no gradients.
+ * [accent] is the foreground inverse of the background: black on light, white on dark.
+ */
+@Immutable
+data class CurioColors(
+    val background: Color,
+    val surface: Color,
+    val surfaceHigh: Color,
+    val outline: Color,
+    val outline2: Color,
+    val text: Color,
+    val muted: Color,
+    val accent: Color,
+    val onAccent: Color,
+    val accentDim: Color,
+    val accentSoft: Color,
+    val danger: Color,
+    val isDark: Boolean
+)
+
+val LightCurioColors = CurioColors(
+    background = Color(0xFFFFFFFF),
+    surface = Color(0xFFFFFFFF),
+    surfaceHigh = Color(0xFFF4F4F5),
+    outline = Color(0xFFE4E4E7),
+    outline2 = Color(0xFFD4D4D8),
+    text = Color(0xFF18181B),
+    muted = Color(0xFF71717A),
+    accent = Color(0xFF18181B),
+    onAccent = Color(0xFFFFFFFF),
+    accentDim = Color(0xFF52525B),
+    accentSoft = Color(0xFFF4F4F5),
+    danger = Color(0xFFB42318),
+    isDark = false
+)
+
+val DarkCurioColors = CurioColors(
+    background = Color(0xFF09090B),
+    surface = Color(0xFF121214),
+    surfaceHigh = Color(0xFF1C1C1F),
+    outline = Color(0xFF232327),
+    outline2 = Color(0xFF35353A),
+    text = Color(0xFFFAFAFA),
+    muted = Color(0xFFA1A1AA),
+    accent = Color(0xFFFAFAFA),
+    onAccent = Color(0xFF18181B),
+    accentDim = Color(0xFFD4D4D8),
+    accentSoft = Color(0xFF202024),
+    danger = Color(0xFFF97066),
+    isDark = true
+)
+
+private val LocalCurioColors = staticCompositionLocalOf { DarkCurioColors }
+
+/**
+ * Semantic colors used across the app. Getters are composable so every screen
+ * re-reads them when the theme changes — no hardcoded colors anywhere else.
+ */
+object Palette {
+    val Ink: Color @Composable get() = LocalCurioColors.current.background
+    val Surface: Color @Composable get() = LocalCurioColors.current.surface
+    val SurfaceHigh: Color @Composable get() = LocalCurioColors.current.surfaceHigh
+    val Outline: Color @Composable get() = LocalCurioColors.current.outline
+    val Outline2: Color @Composable get() = LocalCurioColors.current.outline2
+    val Text: Color @Composable get() = LocalCurioColors.current.text
+    val Muted: Color @Composable get() = LocalCurioColors.current.muted
+    val Accent: Color @Composable get() = LocalCurioColors.current.accent
+    val OnAccent: Color @Composable get() = LocalCurioColors.current.onAccent
+    val AccentDim: Color @Composable get() = LocalCurioColors.current.accentDim
+    val AccentSoft: Color @Composable get() = LocalCurioColors.current.accentSoft
+    val Danger: Color @Composable get() = LocalCurioColors.current.danger
+    val IsDark: Boolean @Composable get() = LocalCurioColors.current.isDark
+}
+
+private fun schemeFor(c: CurioColors) = if (c.isDark) darkColorScheme(
+    primary = c.accent, onPrimary = c.onAccent,
+    primaryContainer = c.accentSoft, onPrimaryContainer = c.text,
+    secondary = c.accentDim, onSecondary = c.onAccent,
+    secondaryContainer = c.surfaceHigh, onSecondaryContainer = c.text,
+    tertiary = c.accentDim, onTertiary = c.onAccent,
+    tertiaryContainer = c.accentSoft, onTertiaryContainer = c.text,
+    background = c.background, onBackground = c.text,
+    surface = c.surface, onSurface = c.text,
+    surfaceVariant = c.surfaceHigh, onSurfaceVariant = c.muted,
+    surfaceContainerLowest = c.background, surfaceContainerLow = c.surface,
+    surfaceContainer = c.surface, surfaceContainerHigh = c.surfaceHigh,
+    surfaceContainerHighest = c.surfaceHigh,
+    outline = c.outline2, outlineVariant = c.outline,
+    error = c.danger, onError = c.onAccent
+) else lightColorScheme(
+    primary = c.accent, onPrimary = c.onAccent,
+    primaryContainer = c.accentSoft, onPrimaryContainer = c.text,
+    secondary = c.accentDim, onSecondary = c.onAccent,
+    secondaryContainer = c.surfaceHigh, onSecondaryContainer = c.text,
+    tertiary = c.accentDim, onTertiary = c.onAccent,
+    tertiaryContainer = c.accentSoft, onTertiaryContainer = c.text,
+    background = c.background, onBackground = c.text,
+    surface = c.surface, onSurface = c.text,
+    surfaceVariant = c.surfaceHigh, onSurfaceVariant = c.muted,
+    surfaceContainerLowest = c.background, surfaceContainerLow = c.surface,
+    surfaceContainer = c.surface, surfaceContainerHigh = c.surfaceHigh,
+    surfaceContainerHighest = c.surfaceHigh,
+    outline = c.outline2, outlineVariant = c.outline,
+    error = c.danger, onError = c.onAccent
 )
 
 private val CurioShapes = Shapes(
-    extraSmall = RoundedCornerShape(10.dp),
-    small = RoundedCornerShape(14.dp),
-    medium = RoundedCornerShape(20.dp),
-    large = RoundedCornerShape(26.dp),
-    extraLarge = RoundedCornerShape(32.dp)
+    extraSmall = RoundedCornerShape(8.dp),
+    small = RoundedCornerShape(10.dp),
+    medium = RoundedCornerShape(14.dp),
+    large = RoundedCornerShape(18.dp),
+    extraLarge = RoundedCornerShape(22.dp)
 )
 
 private val Base = Typography()
 
+/** One quiet sans-serif scale — no display serif, generous but consistent weights. */
 private val CurioTypography = Typography(
-    displayLarge = Base.displayLarge.copy(
-        fontFamily = FontFamily.Serif, fontWeight = FontWeight.Normal, letterSpacing = (-1).sp
-    ),
-    displayMedium = Base.displayMedium.copy(
-        fontFamily = FontFamily.Serif, fontWeight = FontWeight.Normal, letterSpacing = (-0.5).sp
-    ),
-    displaySmall = Base.displaySmall.copy(
-        fontFamily = FontFamily.Serif, fontWeight = FontWeight.Normal
-    ),
-    headlineLarge = Base.headlineLarge.copy(
-        fontFamily = FontFamily.Serif, fontWeight = FontWeight.Normal, letterSpacing = (-0.25).sp
-    ),
-    headlineMedium = Base.headlineMedium.copy(
-        fontFamily = FontFamily.Serif, fontWeight = FontWeight.Normal
-    ),
-    headlineSmall = Base.headlineSmall.copy(
-        fontFamily = FontFamily.Serif, fontWeight = FontWeight.Normal
-    ),
+    displayLarge = Base.displayLarge.copy(fontWeight = FontWeight.SemiBold, letterSpacing = (-1).sp),
+    displayMedium = Base.displayMedium.copy(fontWeight = FontWeight.SemiBold, letterSpacing = (-0.5).sp),
+    displaySmall = Base.displaySmall.copy(fontWeight = FontWeight.SemiBold),
+    headlineLarge = Base.headlineLarge.copy(fontWeight = FontWeight.SemiBold, letterSpacing = (-0.25).sp),
+    headlineMedium = Base.headlineMedium.copy(fontWeight = FontWeight.SemiBold),
+    headlineSmall = Base.headlineSmall.copy(fontWeight = FontWeight.SemiBold),
     titleLarge = Base.titleLarge.copy(fontWeight = FontWeight.Medium),
     titleMedium = Base.titleMedium.copy(fontWeight = FontWeight.Medium, letterSpacing = 0.1.sp),
     titleSmall = Base.titleSmall.copy(fontWeight = FontWeight.Medium, letterSpacing = 0.1.sp),
@@ -101,11 +181,32 @@ private val CurioTypography = Typography(
 )
 
 @Composable
-fun CurioTheme(content: @Composable () -> Unit) {
-    MaterialTheme(
-        colorScheme = CurioScheme,
-        typography = CurioTypography,
-        shapes = CurioShapes,
-        content = content
-    )
+fun CurioTheme(mode: ThemeMode = ThemeMode.SYSTEM, content: @Composable () -> Unit) {
+    val dark = when (mode) {
+        ThemeMode.SYSTEM -> isSystemInDarkTheme()
+        ThemeMode.LIGHT -> false
+        ThemeMode.DARK -> true
+    }
+    val colors = if (dark) DarkCurioColors else LightCurioColors
+
+    // Match the system bar icons to the app theme (activities are edge-to-edge).
+    val view = LocalView.current
+    if (!view.isInEditMode) {
+        SideEffect {
+            (view.context as? Activity)?.window?.let { window ->
+                val controller = WindowCompat.getInsetsController(window, view)
+                controller.isAppearanceLightStatusBars = !dark
+                controller.isAppearanceLightNavigationBars = !dark
+            }
+        }
+    }
+
+    CompositionLocalProvider(LocalCurioColors provides colors) {
+        MaterialTheme(
+            colorScheme = schemeFor(colors),
+            typography = CurioTypography,
+            shapes = CurioShapes,
+            content = content
+        )
+    }
 }

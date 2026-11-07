@@ -4,7 +4,6 @@ import android.os.Build
 import android.os.Bundle
 import android.view.WindowManager
 import androidx.activity.ComponentActivity
-import androidx.activity.SystemBarStyle
 import androidx.activity.compose.BackHandler
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
@@ -48,6 +47,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontFamily
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.aftab.curioalarm.Graph
@@ -109,18 +109,16 @@ class AlarmActivity : ComponentActivity() {
             )
         }
         window.addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
-        enableEdgeToEdge(
-            statusBarStyle = SystemBarStyle.dark(android.graphics.Color.TRANSPARENT),
-            navigationBarStyle = SystemBarStyle.dark(android.graphics.Color.TRANSPARENT)
-        )
+        enableEdgeToEdge()
 
         if (AlarmService.ringing.value == null) {
             finish()
             return
         }
 
+        val themeMode = ThemePrefs.load(this)
         setContent {
-            CurioTheme {
+            CurioTheme(themeMode) {
                 val ringingId by AlarmService.ringing.collectAsState()
                 // React to every transition: dismissed → finish; next queued alarm → new
                 // challenge; kiosk flag of the *current* alarm decides pinning.
@@ -192,7 +190,7 @@ private fun RingScreen(alarm: Alarm?, onSolved: () -> Unit) {
                         DateTimeFormatter.ofLocalizedTime(FormatStyle.SHORT).format(clock),
                         color = Palette.Text,
                         fontSize = 38.sp,
-                        fontFamily = FontFamily.Serif
+                        fontWeight = FontWeight.Light
                     )
                     Text(
                         alarm?.label?.ifBlank { null } ?: "Alarm",
@@ -213,7 +211,7 @@ private fun RingScreen(alarm: Alarm?, onSolved: () -> Unit) {
             }
             Spacer(Modifier.height(16.dp))
             Surface(
-                shape = RoundedCornerShape(28.dp),
+                shape = RoundedCornerShape(20.dp),
                 color = Palette.Surface,
                 border = androidx.compose.foundation.BorderStroke(1.dp, Palette.Outline),
                 modifier = Modifier.fillMaxWidth()
@@ -254,7 +252,8 @@ private fun TimerDoneView(onDismiss: () -> Unit) {
             "00:00",
             color = Palette.Accent,
             fontSize = 44.sp,
-            fontFamily = FontFamily.Serif
+            fontFamily = FontFamily.Monospace,
+            fontWeight = FontWeight.Light
         )
         Text("Your countdown reached zero.", color = Palette.Muted, fontSize = 13.sp)
         PrimaryButton("Dismiss", onClick = onDismiss, modifier = Modifier.fillMaxWidth())
@@ -270,11 +269,12 @@ private fun PulseRings() {
         animationSpec = infiniteRepeatable(tween(2600, easing = LinearEasing), RepeatMode.Restart),
         label = "t"
     )
+    val accent = Palette.Accent
     Canvas(Modifier.fillMaxSize()) {
         for (k in 0..1) {
             val p = (t + k * 0.5f) % 1f
             drawCircle(
-                color = Palette.Accent.copy(alpha = (1f - p) * 0.35f),
+                color = accent.copy(alpha = (1f - p) * 0.35f),
                 radius = size.minDimension / 2f * (0.55f + 0.45f * p),
                 style = Stroke(width = 1.5.dp.toPx())
             )

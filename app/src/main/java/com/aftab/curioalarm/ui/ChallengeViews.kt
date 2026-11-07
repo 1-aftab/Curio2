@@ -31,7 +31,6 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardCapitalization
@@ -95,7 +94,7 @@ fun MathChallenge(puzzle: Puzzle.Math, onSolved: () -> Unit) {
             puzzle.question,
             color = Palette.Text,
             fontSize = 40.sp,
-            fontFamily = FontFamily.Serif,
+            fontWeight = FontWeight.Medium,
             textAlign = TextAlign.Center
         )
         OutlinedTextField(
@@ -107,7 +106,7 @@ fun MathChallenge(puzzle: Puzzle.Math, onSolved: () -> Unit) {
             placeholder = { Text("Your answer", color = Palette.Muted) },
             singleLine = true,
             textStyle = androidx.compose.ui.text.TextStyle(fontSize = 24.sp, textAlign = TextAlign.Center),
-            shape = RoundedCornerShape(18.dp),
+            shape = RoundedCornerShape(12.dp),
             colors = curioFieldColors(),
             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number, imeAction = ImeAction.Done),
             keyboardActions = KeyboardActions(onDone = { submit() }),
@@ -145,7 +144,7 @@ fun PhraseChallenge(puzzle: Puzzle.Phrase, onSolved: () -> Unit) {
             puzzle.text,
             color = Palette.Text,
             fontSize = 24.sp,
-            fontFamily = FontFamily.Serif,
+            fontWeight = FontWeight.Medium,
             textAlign = TextAlign.Center,
             lineHeight = 34.sp
         )
@@ -153,7 +152,7 @@ fun PhraseChallenge(puzzle: Puzzle.Phrase, onSolved: () -> Unit) {
             value = input,
             onValueChange = { input = it; wrong = false },
             placeholder = { Text("Type it here", color = Palette.Muted) },
-            shape = RoundedCornerShape(18.dp),
+            shape = RoundedCornerShape(12.dp),
             colors = curioFieldColors(),
             keyboardOptions = KeyboardOptions(
                 capitalization = KeyboardCapitalization.None,
@@ -261,9 +260,9 @@ private fun PadKey(label: String, modifier: Modifier, onClick: () -> Unit) {
     Box(
         modifier
             .height(58.dp)
-            .clip(RoundedCornerShape(18.dp))
+            .clip(RoundedCornerShape(12.dp))
             .background(Palette.SurfaceHigh)
-            .border(1.dp, Palette.Outline2, RoundedCornerShape(18.dp))
+            .border(1.dp, Palette.Outline2, RoundedCornerShape(12.dp))
             .clickable(onClick = onClick),
         contentAlignment = Alignment.Center
     ) {

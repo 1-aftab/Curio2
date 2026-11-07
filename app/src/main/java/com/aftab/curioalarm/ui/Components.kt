@@ -25,7 +25,6 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.TextStyle
@@ -33,11 +32,6 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-
-/** Warm metallic gradient used for small decorative accents. */
-val AccentBrush: Brush = Brush.horizontalGradient(
-    listOf(Color(0xFFF2DCA8), Color(0xFFE3C27E), Color(0xFFB99A5B), Color(0xFFE8D09A))
-)
 
 @Composable
 fun SectionLabel(text: String, modifier: Modifier = Modifier) {
@@ -57,10 +51,10 @@ fun PrimaryButton(text: String, onClick: () -> Unit, modifier: Modifier = Modifi
         onClick = onClick,
         enabled = enabled,
         modifier = modifier.height(54.dp),
-        shape = RoundedCornerShape(18.dp),
+        shape = RoundedCornerShape(12.dp),
         colors = ButtonDefaults.buttonColors(
             containerColor = Palette.Accent,
-            contentColor = Palette.Ink,
+            contentColor = Palette.OnAccent,
             disabledContainerColor = Palette.SurfaceHigh,
             disabledContentColor = Palette.Muted
         )
@@ -80,7 +74,7 @@ fun GhostButton(
         onClick = onClick,
         enabled = enabled,
         modifier = modifier.height(42.dp),
-        shape = RoundedCornerShape(14.dp),
+        shape = RoundedCornerShape(10.dp),
         border = BorderStroke(1.dp, Palette.Outline2),
         colors = ButtonDefaults.outlinedButtonColors(
             contentColor = Palette.Text,
@@ -143,12 +137,12 @@ fun curioChipColors() = FilterChipDefaults.filterChipColors(
     containerColor = Color.Transparent,
     labelColor = Palette.Muted,
     selectedContainerColor = Palette.Accent,
-    selectedLabelColor = Palette.Ink
+    selectedLabelColor = Palette.OnAccent
 )
 
 @Composable
 fun curioSwitchColors() = SwitchDefaults.colors(
-    checkedThumbColor = Palette.Ink,
+    checkedThumbColor = Palette.OnAccent,
     checkedTrackColor = Palette.Accent,
     checkedBorderColor = Palette.Accent,
     uncheckedThumbColor = Palette.Muted,
@@ -177,7 +171,7 @@ fun CuriosityFooter(modifier: Modifier = Modifier) {
         Text(
             text = "Aftab",
             style = TextStyle(
-                color = Palette.AccentDim,
+                color = Palette.Text,
                 fontSize = 12.5.sp,
                 fontWeight = FontWeight.SemiBold,
                 letterSpacing = 0.1.sp

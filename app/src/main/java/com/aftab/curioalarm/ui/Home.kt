@@ -49,7 +49,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -148,9 +147,9 @@ private fun Greeting() {
         Text(
             greeting,
             color = Palette.Text,
-            fontSize = 34.sp,
-            fontFamily = FontFamily.Serif,
-            letterSpacing = (-0.3).sp
+            fontSize = 32.sp,
+            fontWeight = FontWeight.SemiBold,
+            letterSpacing = (-0.5).sp
         )
         Spacer(Modifier.height(4.dp))
         Text(dateFmt.format(now), color = Palette.Muted, fontSize = 13.sp, letterSpacing = 0.3.sp)
@@ -170,7 +169,7 @@ private fun NextAlarmHero(alarms: List<Alarm>, is24: Boolean) {
             .map { it to Graph.scheduler.nextTrigger(it).toInstant().toEpochMilli() }
             .minByOrNull { it.second }
     }
-    val shape = RoundedCornerShape(28.dp)
+    val shape = RoundedCornerShape(20.dp)
     if (next == null) {
         Surface(
             shape = shape,
@@ -215,9 +214,9 @@ private fun NextAlarmHero(alarms: List<Alarm>, is24: Boolean) {
                 Text(
                     "in " + Fmt.untilText(at - now),
                     color = Palette.Accent,
-                    fontSize = 34.sp,
-                    fontFamily = FontFamily.Serif,
-                    letterSpacing = (-0.3).sp
+                    fontSize = 32.sp,
+                    fontWeight = FontWeight.SemiBold,
+                    letterSpacing = (-0.5).sp
                 )
                 Spacer(Modifier.height(8.dp))
                 Row(verticalAlignment = Alignment.CenterVertically) {
@@ -247,7 +246,7 @@ private fun NextAlarmHero(alarms: List<Alarm>, is24: Boolean) {
 private fun AlarmCard(alarm: Alarm, is24: Boolean, onClick: () -> Unit, onToggle: (Boolean) -> Unit) {
     val contentAlpha by animateFloatAsState(if (alarm.enabled) 1f else 0.45f, tween(300), label = "alpha")
     val (time, suffix) = Fmt.time(alarm.hour, alarm.minute, is24)
-    val shape = RoundedCornerShape(26.dp)
+    val shape = RoundedCornerShape(18.dp)
     Surface(
         shape = shape,
         color = Palette.Surface,
@@ -345,7 +344,7 @@ private fun DayStrip(days: Set<Int>, modifier: Modifier = Modifier) {
 private fun PermissionCard(perms: PermissionStatus, onFix: (PermissionKind) -> Unit) {
     var expanded by rememberSaveable { mutableStateOf(false) }
     val missing = perms.missing
-    val shape = RoundedCornerShape(24.dp)
+    val shape = RoundedCornerShape(16.dp)
     Surface(
         shape = shape,
         color = Palette.Surface,
@@ -415,7 +414,7 @@ private fun EmptyState(onRestorePresets: () -> Unit) {
                 modifier = Modifier.size(30.dp)
             )
         }
-        Text("No alarms yet", color = Palette.Text, fontSize = 22.sp, fontFamily = FontFamily.Serif)
+        Text("No alarms yet", color = Palette.Text, fontSize = 22.sp, fontWeight = FontWeight.SemiBold)
         Text(
             "Start from a preset, or create your own.",
             color = Palette.Muted,

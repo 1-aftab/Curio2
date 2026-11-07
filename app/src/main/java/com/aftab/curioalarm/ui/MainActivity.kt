@@ -6,7 +6,6 @@ import android.content.Intent
 import android.os.Build
 import android.os.Bundle
 import androidx.activity.ComponentActivity
-import androidx.activity.SystemBarStyle
 import androidx.activity.compose.BackHandler
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.compose.setContent
@@ -58,11 +57,20 @@ import java.time.LocalTime
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        enableEdgeToEdge(
-            statusBarStyle = SystemBarStyle.dark(android.graphics.Color.TRANSPARENT),
-            navigationBarStyle = SystemBarStyle.dark(android.graphics.Color.TRANSPARENT)
-        )
-        setContent { CurioTheme { CurioRoot() } }
+        enableEdgeToEdge()
+        setContent {
+            // Theme choice is persisted; CurioTheme restyles everything (incl. system bars).
+            var themeMode by remember { mutableStateOf(ThemePrefs.load(this@MainActivity)) }
+            CurioTheme(themeMode) {
+                CurioRoot(
+                    themeMode = themeMode,
+                    onThemeChange = {
+                        themeMode = it
+                        ThemePrefs.save(this@MainActivity, it)
+                    }
+                )
+            }
+        }
     }
 
     override fun onResume() {
@@ -80,7 +88,11 @@ class MainActivity : ComponentActivity() {
 }
 
 @Composable
-private fun CurioRoot(vm: AlarmViewModel = viewModel()) {
+private fun CurioRoot(
+    themeMode: ThemeMode,
+    onThemeChange: (ThemeMode) -> Unit,
+    vm: AlarmViewModel = viewModel()
+) {
     val ctx = LocalContext.current
     val activity = ctx as ComponentActivity
     val alarms by vm.alarms.collectAsState()
@@ -124,7 +136,7 @@ private fun CurioRoot(vm: AlarmViewModel = viewModel()) {
         }
     }
 
-    // Selected section: 0 = Alarms, 1 = Stopwatch, 2 = Timer. Survives process death.
+    // Selected section: 0 = Alarms, 1 = Stopwatch, 2 = Timer, 3 = Settings. Survives process death.
     var tab by rememberSaveable { mutableIntStateOf(0) }
 
     // Editor state lives here so it survives process death:
@@ -180,7 +192,7 @@ private fun CurioRoot(vm: AlarmViewModel = viewModel()) {
                             openEditor(Alarm(hour = t.hour, minute = 0))
                         },
                         containerColor = Palette.Accent,
-                        contentColor = Palette.Ink,
+                        contentColor = Palette.OnAccent,
                         icon = { Icon(Icons.Default.Add, contentDescription = null) },
                         text = { Text("New alarm", fontWeight = FontWeight.SemiBold, letterSpacing = 0.3.sp) }
                     )
@@ -205,7 +217,12 @@ private fun CurioRoot(vm: AlarmViewModel = viewModel()) {
                     contentPadding = inner
                 )
                 1 -> StopwatchScreen(contentPadding = inner)
-                else -> TimerScreen(contentPadding = inner)
+                2 -> TimerScreen(contentPadding = inner)
+                else -> SettingsScreen(
+                    themeMode = themeMode,
+                    onThemeChange = onThemeChange,
+                    contentPadding = inner
+                )
             }
         }
 
@@ -231,13 +248,14 @@ private fun CurioRoot(vm: AlarmViewModel = viewModel()) {
     }
 }
 
-/** Three sections, each with its own screen: Alarms · Stopwatch · Timer. */
+/** Four sections, each with its own screen: Alarms · Stopwatch · Timer · Settings. */
 @Composable
 private fun CurioBottomNav(selected: Int, onSelect: (Int) -> Unit) {
     val items = listOf(
         Triple("Alarms", R.drawable.ic_tab_alarms, 0),
         Triple("Stopwatch", R.drawable.ic_tab_stopwatch, 1),
-        Triple("Timer", R.drawable.ic_tab_timer, 2)
+        Triple("Timer", R.drawable.ic_tab_timer, 2),
+        Triple("Settings", R.drawable.ic_tab_settings, 3)
     )
     NavigationBar(
         containerColor = Palette.Surface,
@@ -257,7 +275,7 @@ private fun CurioBottomNav(selected: Int, onSelect: (Int) -> Unit) {
                 },
                 label = { Text(title, fontSize = 11.sp, letterSpacing = 0.3.sp) },
                 colors = NavigationBarItemDefaults.colors(
-                    selectedIconColor = Palette.Ink,
+                    selectedIconColor = Palette.OnAccent,
                     selectedTextColor = Palette.Accent,
                     indicatorColor = Palette.Accent,
                     unselectedIconColor = Palette.Muted,
