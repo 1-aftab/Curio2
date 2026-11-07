@@ -28,15 +28,12 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.KeyboardArrowDown
 import androidx.compose.material.icons.filled.KeyboardArrowUp
 import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material.icons.filled.Notifications
 import androidx.compose.material.icons.filled.Warning
-import androidx.compose.material3.ExtendedFloatingActionButton
 import androidx.compose.material3.Icon
-import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
@@ -69,67 +66,56 @@ fun HomeScreen(
     alarms: List<Alarm>,
     perms: PermissionStatus,
     onFix: (PermissionKind) -> Unit,
-    onAdd: () -> Unit,
     onEdit: (Alarm) -> Unit,
     onToggle: (Alarm, Boolean) -> Unit,
-    onRestorePresets: () -> Unit
+    onRestorePresets: () -> Unit,
+    contentPadding: PaddingValues
 ) {
     val ctx = LocalContext.current
     val is24 = remember { DateFormat.is24HourFormat(ctx) }
 
-    Scaffold(
-        containerColor = Palette.Ink,
-        floatingActionButton = {
-            ExtendedFloatingActionButton(
-                onClick = onAdd,
-                containerColor = Palette.Accent,
-                contentColor = Palette.Ink,
-                icon = { Icon(Icons.Default.Add, contentDescription = null) },
-                text = { Text("New alarm", fontWeight = FontWeight.SemiBold, letterSpacing = 0.3.sp) }
-            )
-        },
-        bottomBar = { CuriosityFooter() }
-    ) { inner ->
-        LazyColumn(
-            modifier = Modifier.fillMaxSize(),
-            contentPadding = PaddingValues(
-                start = 20.dp,
-                end = 20.dp,
-                top = inner.calculateTopPadding() + 24.dp,
-                bottom = inner.calculateBottomPadding() + 96.dp
-            ),
-            verticalArrangement = Arrangement.spacedBy(14.dp)
-        ) {
-            item { Greeting() }
-            item { NextAlarmHero(alarms, is24) }
-            if (!perms.allGood) item { PermissionCard(perms, onFix) }
-            if (alarms.isEmpty()) {
-                item { EmptyState(onRestorePresets) }
-            } else {
-                item {
-                    Row(
-                        Modifier.fillMaxWidth().padding(top = 8.dp),
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        SectionLabel("Your alarms", Modifier.weight(1f))
-                        Text(
-                            "${alarms.count { it.enabled }} on",
-                            color = Palette.Muted,
-                            fontSize = 11.sp,
-                            letterSpacing = 0.4.sp
-                        )
-                    }
-                }
-                items(alarms, key = { it.id }) { alarm ->
-                    AlarmCard(
-                        alarm = alarm,
-                        is24 = is24,
-                        onClick = { onEdit(alarm) },
-                        onToggle = { onToggle(alarm, it) }
+    // Content only: the root Scaffold in MainActivity owns the FAB and bottom navigation,
+    // so the footer scrolls with the list and can never overlap the "New alarm" button.
+    LazyColumn(
+        modifier = Modifier.fillMaxSize(),
+        contentPadding = PaddingValues(
+            start = 20.dp,
+            end = 20.dp,
+            top = contentPadding.calculateTopPadding() + 24.dp,
+            bottom = contentPadding.calculateBottomPadding() + 96.dp
+        ),
+        verticalArrangement = Arrangement.spacedBy(14.dp)
+    ) {
+        item { Greeting() }
+        item { NextAlarmHero(alarms, is24) }
+        if (!perms.allGood) item { PermissionCard(perms, onFix) }
+        if (alarms.isEmpty()) {
+            item { EmptyState(onRestorePresets) }
+        } else {
+            item {
+                Row(
+                    Modifier.fillMaxWidth().padding(top = 8.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    SectionLabel("Your alarms", Modifier.weight(1f))
+                    Text(
+                        "${alarms.count { it.enabled }} on",
+                        color = Palette.Muted,
+                        fontSize = 11.sp,
+                        letterSpacing = 0.4.sp
                     )
                 }
             }
+            items(alarms, key = { it.id }) { alarm ->
+                AlarmCard(
+                    alarm = alarm,
+                    is24 = is24,
+                    onClick = { onEdit(alarm) },
+                    onToggle = { onToggle(alarm, it) }
+                )
+            }
         }
+        item { CuriosityFooter(Modifier.padding(top = 6.dp)) }
     }
 }
 

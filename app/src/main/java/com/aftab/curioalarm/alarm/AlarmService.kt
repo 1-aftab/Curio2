@@ -25,6 +25,7 @@ import androidx.core.content.ContextCompat
 import com.aftab.curioalarm.Graph
 import com.aftab.curioalarm.R
 import com.aftab.curioalarm.data.Alarm
+import com.aftab.curioalarm.tools.TimerController
 import com.aftab.curioalarm.ui.AlarmActivity
 import java.io.File
 import java.time.LocalTime
@@ -69,13 +70,13 @@ class AlarmService : Service() {
                     stopSelf()
                     return START_NOT_STICKY
                 }
-                postForeground(Graph.repo.get(currentAlarmId), currentAlarmId)
+                postForeground(resolve(currentAlarmId), currentAlarmId)
                 return START_REDELIVER_INTENT
             }
         }
 
         val id = intent?.getIntExtra(EXTRA_ALARM_ID, -1) ?: -1
-        val alarm = Graph.repo.get(id)
+        val alarm = resolve(id)
 
         // Phantom trigger: the alarm was deleted (or the intent is malformed / redelivered
         // without data). Never ring for a non-existent alarm — it could never be dismissed
@@ -84,7 +85,7 @@ class AlarmService : Service() {
             if (currentAlarmId >= 0) {
                 // Keep the current alarm ringing; still re-promote to satisfy the
                 // startForegroundService() contract for this start.
-                postForeground(Graph.repo.get(currentAlarmId), currentAlarmId)
+                postForeground(resolve(currentAlarmId), currentAlarmId)
             } else {
                 // Promote first, then stop — some OEM builds crash otherwise even when
                 // stopSelf() is immediate.
@@ -104,7 +105,7 @@ class AlarmService : Service() {
             if (id != currentAlarmId && id !in queue) queue.addLast(id)
             // re-promote with the *current* alarm's info: startForegroundService() requires
             // startForeground() on every start, even for duplicates and queued alarms.
-            postForeground(Graph.repo.get(currentAlarmId), currentAlarmId)
+            postForeground(resolve(currentAlarmId), currentAlarmId)
             return START_REDELIVER_INTENT
         }
 
@@ -113,6 +114,10 @@ class AlarmService : Service() {
         beginRinging(alarm)
         return START_REDELIVER_INTENT
     }
+
+    /** Stored alarm, or the synthetic timer alarm for the reserved timer id. */
+    private fun resolve(id: Int): Alarm? =
+        if (id == TimerController.TIMER_ID) Graph.timer.ringingAlarm() else Graph.repo.get(id)
 
     private fun beginRinging(alarm: Alarm) {
         stopPlayback()
@@ -127,8 +132,9 @@ class AlarmService : Service() {
     /** Solves the current alarm; rings the next queued one, or stops when the queue is empty. */
     private fun dismissCurrent() {
         stopPlayback()
+        if (currentAlarmId == TimerController.TIMER_ID) Graph.timer.onRingDismissed()
         while (queue.isNotEmpty()) {
-            val next = Graph.repo.get(queue.removeFirst())
+            val next = resolve(queue.removeFirst())
             if (next != null) {
                 postForeground(next, next.id)
                 beginRinging(next)
@@ -199,7 +205,7 @@ class AlarmService : Service() {
         return NotificationCompat.Builder(this, Notifier.CH_RING)
             .setSmallIcon(R.drawable.ic_stat_alarm)
             .setContentTitle(alarm?.label?.ifBlank { null } ?: "Alarm")
-            .setContentText("$time · Solve the challenge to dismiss")
+            .setContentText(if (alarm != null && alarm.challenges.isEmpty()) "$time · Time's up — tap to open" else "$time · Solve the challenge to dismiss")
             .setCategory(NotificationCompat.CATEGORY_ALARM)
             .setPriority(NotificationCompat.PRIORITY_MAX)
             .setVisibility(NotificationCompat.VISIBILITY_PUBLIC)
@@ -225,13 +231,13 @@ class AlarmService : Service() {
             if (!triedFallback) {
                 triedFallback = true
                 playerSwap(prepareFallback())
-                if (alarm?.gradualVolume != false) rampVolume() else player?.setVolume(1f, 1f)
+                if (alarm != null && alarm.gradualVolume) rampVolume() else player?.setVolume(1f, 1f)
             }
             true
         }
         player = mp
         mp.start()
-        if (alarm?.gradualVolume != false) rampVolume() else mp.setVolume(1f, 1f)
+        if (alarm != null && alarm.gradualVolume) rampVolume() else mp.setVolume(1f, 1f)
     }
 
     private fun playerSwap(next: MediaPlayer?) {

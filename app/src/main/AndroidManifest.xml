@@ -53,6 +53,10 @@
             android:exported="false" />
 
         <receiver
+            android:name=".alarm.TimerReceiver"
+            android:exported="false" />
+
+        <receiver
             android:name=".alarm.BootReceiver"
             android:exported="true">
             <intent-filter>

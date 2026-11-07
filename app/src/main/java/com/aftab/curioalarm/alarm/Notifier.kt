@@ -32,6 +32,20 @@ object Notifier {
         nm.createNotificationChannel(info)
     }
 
+    fun showMissedTimer(context: Context, label: String) {
+        ensureChannels(context)
+        val n = NotificationCompat.Builder(context, CH_INFO)
+            .setSmallIcon(R.drawable.ic_stat_alarm)
+            .setContentTitle("Timer finished")
+            .setContentText("${label.ifBlank { "Your timer" }} reached zero but could not ring.")
+            .setAutoCancel(true)
+            .build()
+        try {
+            NotificationManagerCompat.from(context).notify(20_001, n)
+        } catch (_: SecurityException) {
+        }
+    }
+
     fun showMissed(context: Context, alarm: Alarm) {
         ensureChannels(context)
         val time = DateTimeFormatter.ofLocalizedTime(FormatStyle.SHORT)

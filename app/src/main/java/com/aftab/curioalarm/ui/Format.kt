@@ -37,6 +37,31 @@ object Fmt {
         if (alarm.challenges.size > 1) "Random · ${alarm.challenges.size} tasks"
         else alarm.challenges.firstOrNull()?.title ?: "Math"
 
+    /** Stopwatch display: "MM:SS.hh", or "H:MM:SS.hh" once past an hour. */
+    fun stopwatch(millis: Long): String {
+        val ms = millis.coerceAtLeast(0)
+        val cs = (ms / 10) % 100
+        val totalSec = ms / 1000
+        val sec = totalSec % 60
+        val min = (totalSec / 60) % 60
+        val h = totalSec / 3600
+        val ss = sec.toString().padStart(2, '0')
+        val mm = min.toString().padStart(2, '0')
+        val hh = cs.toString().padStart(2, '0')
+        return if (h > 0) "$h:$mm:$ss.$hh" else "$mm:$ss.$hh"
+    }
+
+    /** Countdown display: "MM:SS" / "H:MM:SS", rounded up so a fresh 1 s timer shows 00:01. */
+    fun countdown(millis: Long): String {
+        val totalSec = (millis.coerceAtLeast(0) + 999L) / 1000L
+        val sec = totalSec % 60
+        val min = (totalSec / 60) % 60
+        val h = totalSec / 3600
+        val ss = sec.toString().padStart(2, '0')
+        val mm = min.toString().padStart(2, '0')
+        return if (h > 0) "$h:$mm:$ss" else "$mm:$ss"
+    }
+
     /**
      * Human countdown, rounded up to the next whole minute so "1 min" never
      * appears for an alarm that is seconds away (and "0 min" never shows).

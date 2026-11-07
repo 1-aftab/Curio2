@@ -1,7 +1,8 @@
 # Curio Alarm
 
-A minimal, dark-by-design Android alarm clock that only stops ringing when you wake your
+A minimal, dark-by-design Android clock that only stops ringing when you wake your
 brain up: every alarm is dismissed by solving a **math**, **memory**, or **phrase** challenge.
+Three sections via bottom navigation: **Alarms · Stopwatch · Timer**.
 
 ## Features
 
@@ -13,8 +14,14 @@ brain up: every alarm is dismissed by solving a **math**, **memory**, or **phras
   fade the volume in gradually, and add vibration.
 - **Kiosk mode** — opens the challenge screen immediately and pins it where Android allows,
   for the truly heavy sleepers.
+- **Stopwatch** — lap timing with fastest/slowest highlights; keeps correct time while the
+  app is backgrounded and restores after process death (paused for review after a reboot).
+- **Timer** — presets or custom h/m/s, optional label, pause / +1 min / repeat-last. The finish
+  moment is registered with `setAlarmClock`, so it rings through the same reliable pipeline as
+  alarms even with the app closed or the phone locked — dismissed with a single tap, no challenge.
 - **Nightstand UI** — deep-ink theme with a champagne accent, serif display type, next-alarm
   countdown, day strips, and a full editor with dial *or* keyboard time entry and repeat presets.
+  The footer scrolls with the content, so it never collides with the "New alarm" button.
 
 ## Build
 
