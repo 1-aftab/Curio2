@@ -52,6 +52,28 @@ class FmtTest {
     }
 
     @Test
+    fun stopwatchFormats() {
+        assertEquals("00:00.00", Fmt.stopwatch(0))
+        assertEquals("00:00.05", Fmt.stopwatch(50))
+        assertEquals("01:01.23", Fmt.stopwatch(61_230))
+        assertEquals("59:59.99", Fmt.stopwatch(3_599_990))
+        assertEquals("1:00:00.00", Fmt.stopwatch(3_600_000))
+        assertEquals("00:00.00", Fmt.stopwatch(-100))
+    }
+
+    @Test
+    fun countdownRoundsUpToWholeSeconds() {
+        assertEquals("00:00", Fmt.countdown(0))
+        assertEquals("00:01", Fmt.countdown(1))
+        assertEquals("00:01", Fmt.countdown(1_000))
+        assertEquals("00:02", Fmt.countdown(1_001))
+        assertEquals("01:00", Fmt.countdown(60_000))
+        assertEquals("1:00:00", Fmt.countdown(3_600_000))
+        assertEquals("23:59:59", Fmt.countdown((23 * 3600 + 59 * 60 + 59) * 1000L))
+        assertEquals("00:00", Fmt.countdown(-5_000))
+    }
+
+    @Test
     fun challengeShortLabels() {
         val single = Alarm(challenges = setOf(ChallengeType.MATH))
         assertEquals("Math", Fmt.challengeShort(single))

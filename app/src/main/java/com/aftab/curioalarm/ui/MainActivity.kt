@@ -20,6 +20,16 @@ import androidx.compose.animation.slideInVertically
 import androidx.compose.animation.slideOutVertically
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.size
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Add
+import androidx.compose.material3.ExtendedFloatingActionButton
+import androidx.compose.material3.Icon
+import androidx.compose.material3.NavigationBar
+import androidx.compose.material3.NavigationBarItem
+import androidx.compose.material3.NavigationBarItemDefaults
+import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
@@ -33,9 +43,14 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.viewmodel.compose.viewModel
+import com.aftab.curioalarm.R
 import com.aftab.curioalarm.alarm.AlarmService
 import com.aftab.curioalarm.data.Alarm
 import java.time.LocalTime
@@ -109,6 +124,9 @@ private fun CurioRoot(vm: AlarmViewModel = viewModel()) {
         }
     }
 
+    // Selected section: 0 = Alarms, 1 = Stopwatch, 2 = Timer. Survives process death.
+    var tab by rememberSaveable { mutableIntStateOf(0) }
+
     // Editor state lives here so it survives process death:
     //  -1 = closed, 0 = new alarm, >0 = editing that stored alarm.
     var editorAlarmId by rememberSaveable { mutableIntStateOf(-1) }
@@ -146,27 +164,50 @@ private fun CurioRoot(vm: AlarmViewModel = viewModel()) {
     }
 
     BackHandler(enabled = editorVisible) { closeEditor() }
+    BackHandler(enabled = !editorVisible && tab != 0) { tab = 0 }
 
     Box(Modifier.fillMaxSize()) {
-        HomeScreen(
-            alarms = alarms,
-            perms = perms,
-            onFix = { kind ->
-                if (kind == PermissionKind.NOTIFICATIONS && Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-                    openSettingsOnDeny = true
-                    notificationLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
-                } else {
-                    Permissions.open(ctx, kind)
+        // One root Scaffold: the FAB floats above the navigation bar (never over the
+        // footer, which now scrolls inside each tab's content).
+        Scaffold(
+            containerColor = Palette.Ink,
+            bottomBar = { CurioBottomNav(selected = tab, onSelect = { tab = it }) },
+            floatingActionButton = {
+                if (tab == 0 && !editorVisible) {
+                    ExtendedFloatingActionButton(
+                        onClick = {
+                            val t = LocalTime.now().plusHours(1)
+                            openEditor(Alarm(hour = t.hour, minute = 0))
+                        },
+                        containerColor = Palette.Accent,
+                        contentColor = Palette.Ink,
+                        icon = { Icon(Icons.Default.Add, contentDescription = null) },
+                        text = { Text("New alarm", fontWeight = FontWeight.SemiBold, letterSpacing = 0.3.sp) }
+                    )
                 }
-            },
-            onAdd = {
-                val t = LocalTime.now().plusHours(1)
-                openEditor(Alarm(hour = t.hour, minute = 0))
-            },
-            onEdit = { openEditor(it) },
-            onToggle = { alarm, on -> vm.toggle(alarm, on) },
-            onRestorePresets = { vm.restorePresets() }
-        )
+            }
+        ) { inner ->
+            when (tab) {
+                0 -> HomeScreen(
+                    alarms = alarms,
+                    perms = perms,
+                    onFix = { kind ->
+                        if (kind == PermissionKind.NOTIFICATIONS && Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                            openSettingsOnDeny = true
+                            notificationLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
+                        } else {
+                            Permissions.open(ctx, kind)
+                        }
+                    },
+                    onEdit = { openEditor(it) },
+                    onToggle = { alarm, on -> vm.toggle(alarm, on) },
+                    onRestorePresets = { vm.restorePresets() },
+                    contentPadding = inner
+                )
+                1 -> StopwatchScreen(contentPadding = inner)
+                else -> TimerScreen(contentPadding = inner)
+            }
+        }
 
         AnimatedVisibility(
             visible = editorVisible,
@@ -186,6 +227,43 @@ private fun CurioRoot(vm: AlarmViewModel = viewModel()) {
                     )
                 }
             }
+        }
+    }
+}
+
+/** Three sections, each with its own screen: Alarms · Stopwatch · Timer. */
+@Composable
+private fun CurioBottomNav(selected: Int, onSelect: (Int) -> Unit) {
+    val items = listOf(
+        Triple("Alarms", R.drawable.ic_tab_alarms, 0),
+        Triple("Stopwatch", R.drawable.ic_tab_stopwatch, 1),
+        Triple("Timer", R.drawable.ic_tab_timer, 2)
+    )
+    NavigationBar(
+        containerColor = Palette.Surface,
+        contentColor = Palette.Muted,
+        tonalElevation = 0.dp
+    ) {
+        items.forEach { (title, icon, index) ->
+            NavigationBarItem(
+                selected = selected == index,
+                onClick = { onSelect(index) },
+                icon = {
+                    Icon(
+                        painterResource(icon),
+                        contentDescription = title,
+                        modifier = Modifier.size(23.dp)
+                    )
+                },
+                label = { Text(title, fontSize = 11.sp, letterSpacing = 0.3.sp) },
+                colors = NavigationBarItemDefaults.colors(
+                    selectedIconColor = Palette.Ink,
+                    selectedTextColor = Palette.Accent,
+                    indicatorColor = Palette.Accent,
+                    unselectedIconColor = Palette.Muted,
+                    unselectedTextColor = Palette.Muted
+                )
+            )
         }
     }
 }

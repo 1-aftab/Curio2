@@ -57,6 +57,7 @@ import com.aftab.curioalarm.challenge.Puzzle
 import com.aftab.curioalarm.data.Alarm
 import com.aftab.curioalarm.data.ChallengeType
 import com.aftab.curioalarm.data.Difficulty
+import com.aftab.curioalarm.tools.TimerController
 import java.time.LocalTime
 import java.time.format.DateTimeFormatter
 import java.time.format.FormatStyle
@@ -128,7 +129,7 @@ class AlarmActivity : ComponentActivity() {
                     if (id == null) {
                         releaseLockTask()
                         finish()
-                    } else if (Graph.repo.get(id)?.hardMode == true) {
+                    } else if (resolveAlarm(id)?.hardMode == true) {
                         tryLockTask()
                     } else {
                         releaseLockTask()
@@ -137,7 +138,7 @@ class AlarmActivity : ComponentActivity() {
                 ringingId?.let { id ->
                     key(id) {
                         RingScreen(
-                            alarm = Graph.repo.get(id),
+                            alarm = resolveAlarm(id),
                             onSolved = { AlarmService.dismiss(applicationContext) }
                         )
                     }
@@ -147,9 +148,14 @@ class AlarmActivity : ComponentActivity() {
     }
 }
 
+/** Stored alarm, or the synthetic timer alarm for the reserved timer id. */
+private fun resolveAlarm(id: Int): Alarm? =
+    if (id == TimerController.TIMER_ID) Graph.timer.ringingAlarm() else Graph.repo.get(id)
+
 @Composable
 private fun RingScreen(alarm: Alarm?, onSolved: () -> Unit) {
     val ctx = LocalContext.current
+    val isTimer = alarm != null && alarm.challenges.isEmpty()
     val types = alarm?.challenges?.takeIf { it.isNotEmpty() } ?: setOf(ChallengeType.MATH)
     val difficulty = alarm?.difficulty ?: Difficulty.MEDIUM
 
@@ -197,9 +203,13 @@ private fun RingScreen(alarm: Alarm?, onSolved: () -> Unit) {
                 }
             }
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                MetaChip(type.title)
-                MetaChip(difficulty.title)
-                if (round > 0) MetaChip("Attempt ${round + 1}")
+                if (isTimer) {
+                    MetaChip("Timer")
+                } else {
+                    MetaChip(type.title)
+                    MetaChip(difficulty.title)
+                    if (round > 0) MetaChip("Attempt ${round + 1}")
+                }
             }
             Spacer(Modifier.height(16.dp))
             Surface(
@@ -209,20 +219,45 @@ private fun RingScreen(alarm: Alarm?, onSolved: () -> Unit) {
                 modifier = Modifier.fillMaxWidth()
             ) {
                 Box(Modifier.padding(24.dp)) {
-                    when (puzzle) {
-                        is Puzzle.Math -> MathChallenge(puzzle, onSolved)
-                        is Puzzle.Phrase -> PhraseChallenge(puzzle, onSolved)
-                        is Puzzle.Memory -> MemoryChallenge(puzzle, onSolved, onWrong = { round++ })
+                    if (isTimer) {
+                        TimerDoneView(onDismiss = onSolved)
+                    } else {
+                        when (puzzle) {
+                            is Puzzle.Math -> MathChallenge(puzzle, onSolved)
+                            is Puzzle.Phrase -> PhraseChallenge(puzzle, onSolved)
+                            is Puzzle.Memory -> MemoryChallenge(puzzle, onSolved, onWrong = { round++ })
+                        }
                     }
                 }
             }
             Spacer(Modifier.height(16.dp))
             Text(
-                "The alarm will keep ringing until the challenge is complete.",
+                if (isTimer) "Tap dismiss to stop the ringing."
+                else "The alarm will keep ringing until the challenge is complete.",
                 color = Palette.Muted,
                 fontSize = 12.sp
             )
         }
+    }
+}
+
+/** Timers need no challenge — just an explicit dismiss. */
+@Composable
+private fun TimerDoneView(onDismiss: () -> Unit) {
+    Column(
+        Modifier.fillMaxWidth(),
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.spacedBy(18.dp)
+    ) {
+        SectionLabel("Time's up")
+        Text(
+            "00:00",
+            color = Palette.Accent,
+            fontSize = 44.sp,
+            fontFamily = FontFamily.Serif
+        )
+        Text("Your countdown reached zero.", color = Palette.Muted, fontSize = 13.sp)
+        PrimaryButton("Dismiss", onClick = onDismiss, modifier = Modifier.fillMaxWidth())
     }
 }
 
