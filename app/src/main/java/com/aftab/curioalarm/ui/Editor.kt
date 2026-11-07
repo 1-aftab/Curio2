@@ -60,7 +60,6 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
@@ -172,7 +171,7 @@ fun AlarmEditor(
                 Text(
                     if (isNew) "New alarm" else "Edit alarm",
                     color = Palette.Text,
-                    fontFamily = FontFamily.Serif,
+                    fontWeight = FontWeight.SemiBold,
                     fontSize = 20.sp,
                     modifier = Modifier.weight(1f),
                     textAlign = TextAlign.Center
@@ -188,7 +187,7 @@ fun AlarmEditor(
 
             // ---- time
             Surface(
-                shape = RoundedCornerShape(28.dp),
+                shape = RoundedCornerShape(20.dp),
                 color = Palette.Surface,
                 border = BorderStroke(1.dp, Palette.Outline),
                 modifier = Modifier.fillMaxWidth().padding(horizontal = 20.dp, vertical = 10.dp)
@@ -231,7 +230,7 @@ fun AlarmEditor(
                     onValueChange = { if (it.length <= 40) label = it },
                     label = { Text("Label") },
                     singleLine = true,
-                    shape = RoundedCornerShape(18.dp),
+                    shape = RoundedCornerShape(12.dp),
                     colors = curioFieldColors(),
                     modifier = Modifier.fillMaxWidth()
                 )
@@ -265,7 +264,7 @@ fun AlarmEditor(
                             ) {
                                 Text(
                                     names[day - 1],
-                                    color = if (selected) Palette.Ink else Palette.Muted,
+                                    color = if (selected) Palette.OnAccent else Palette.Muted,
                                     fontWeight = FontWeight.SemiBold
                                 )
                             }
@@ -282,7 +281,7 @@ fun AlarmEditor(
                 Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
                     SectionLabel("Sound")
                     Surface(
-                        shape = RoundedCornerShape(22.dp),
+                        shape = RoundedCornerShape(16.dp),
                         color = Palette.Surface,
                         border = BorderStroke(1.dp, Palette.Outline),
                         modifier = Modifier.fillMaxWidth()
@@ -364,7 +363,7 @@ fun AlarmEditor(
                             if (selected) Palette.AccentDim.copy(alpha = 0.6f) else Palette.Outline,
                             label = "challengeBorder"
                         )
-                        val shape = RoundedCornerShape(20.dp)
+                        val shape = RoundedCornerShape(14.dp)
                         Surface(
                             shape = shape,
                             color = if (selected) Palette.AccentSoft else Palette.Surface,
@@ -402,7 +401,7 @@ fun AlarmEditor(
                                         Icon(
                                             Icons.Default.Check,
                                             contentDescription = null,
-                                            tint = Palette.Ink,
+                                            tint = Palette.OnAccent,
                                             modifier = Modifier.size(15.dp)
                                         )
                                     }
@@ -425,7 +424,7 @@ fun AlarmEditor(
                                 shape = SegmentedButtonDefaults.itemShape(index = index, count = Difficulty.entries.size),
                                 colors = SegmentedButtonDefaults.colors(
                                     activeContainerColor = Palette.Accent,
-                                    activeContentColor = Palette.Ink,
+                                    activeContentColor = Palette.OnAccent,
                                     inactiveContainerColor = Palette.Surface,
                                     inactiveContentColor = Palette.Muted,
                                     activeBorderColor = Palette.Accent,
@@ -441,7 +440,7 @@ fun AlarmEditor(
                 Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
                     SectionLabel("Mode")
                     Surface(
-                        shape = RoundedCornerShape(22.dp),
+                        shape = RoundedCornerShape(16.dp),
                         color = Palette.Surface,
                         border = BorderStroke(1.dp, Palette.Outline),
                         modifier = Modifier.fillMaxWidth()
@@ -470,7 +469,7 @@ fun AlarmEditor(
                     androidx.compose.material3.OutlinedButton(
                         onClick = { confirmDelete = true },
                         modifier = Modifier.fillMaxWidth().height(48.dp),
-                        shape = RoundedCornerShape(16.dp),
+                        shape = RoundedCornerShape(12.dp),
                         border = BorderStroke(1.dp, Palette.Danger.copy(alpha = 0.45f)),
                         colors = androidx.compose.material3.ButtonDefaults.outlinedButtonColors(contentColor = Palette.Danger)
                     ) { Text("Delete alarm") }

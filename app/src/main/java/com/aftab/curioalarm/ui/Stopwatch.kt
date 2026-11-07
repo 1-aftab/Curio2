@@ -74,9 +74,9 @@ fun StopwatchScreen(contentPadding: PaddingValues) {
                 Text(
                     "Stopwatch",
                     color = Palette.Text,
-                    fontSize = 34.sp,
-                    fontFamily = FontFamily.Serif,
-                    letterSpacing = (-0.3).sp
+                    fontSize = 32.sp,
+                    fontWeight = FontWeight.SemiBold,
+                    letterSpacing = (-0.5).sp
                 )
                 Spacer(Modifier.height(4.dp))
                 Text(
@@ -90,7 +90,7 @@ fun StopwatchScreen(contentPadding: PaddingValues) {
 
         item {
             Surface(
-                shape = RoundedCornerShape(28.dp),
+                shape = RoundedCornerShape(20.dp),
                 color = Palette.Surface,
                 border = BorderStroke(1.dp, Palette.Outline),
                 modifier = Modifier.fillMaxWidth()
@@ -183,7 +183,7 @@ fun StopwatchScreen(contentPadding: PaddingValues) {
                     else -> Palette.Text
                 }
                 Surface(
-                    shape = RoundedCornerShape(18.dp),
+                    shape = RoundedCornerShape(12.dp),
                     color = Palette.Surface,
                     border = BorderStroke(1.dp, Palette.Outline),
                     modifier = Modifier.fillMaxWidth()

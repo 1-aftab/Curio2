@@ -2,7 +2,7 @@
 
 A minimal, dark-by-design Android clock that only stops ringing when you wake your
 brain up: every alarm is dismissed by solving a **math**, **memory**, or **phrase** challenge.
-Three sections via bottom navigation: **Alarms · Stopwatch · Timer**.
+Four sections via bottom navigation: **Alarms · Stopwatch · Timer · Settings**.
 
 ## Features
 
@@ -19,9 +19,11 @@ Three sections via bottom navigation: **Alarms · Stopwatch · Timer**.
 - **Timer** — presets or custom h/m/s, optional label, pause / +1 min / repeat-last. The finish
   moment is registered with `setAlarmClock`, so it rings through the same reliable pipeline as
   alarms even with the app closed or the phone locked — dismissed with a single tap, no challenge.
-- **Nightstand UI** — deep-ink theme with a champagne accent, serif display type, next-alarm
-  countdown, day strips, and a full editor with dial *or* keyboard time entry and repeat presets.
-  The footer scrolls with the content, so it never collides with the "New alarm" button.
+- **Clean monochrome design** — a professional black-and-white look in both light and dark,
+  switchable under **Settings → Appearance** (System / Light / Dark, applied everywhere
+  including the ringing screen and system bars). Quiet sans-serif type, hairline borders,
+  next-alarm countdown, day strips, and a full editor with dial *or* keyboard time entry
+  and repeat presets. The footer scrolls with the content, clear of the "New alarm" button.
 
 ## Build
 

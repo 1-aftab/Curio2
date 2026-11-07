@@ -110,9 +110,9 @@ fun TimerScreen(contentPadding: PaddingValues) {
                 Text(
                     "Timer",
                     color = Palette.Text,
-                    fontSize = 34.sp,
-                    fontFamily = FontFamily.Serif,
-                    letterSpacing = (-0.3).sp
+                    fontSize = 32.sp,
+                    fontWeight = FontWeight.SemiBold,
+                    letterSpacing = (-0.5).sp
                 )
                 Spacer(Modifier.height(4.dp))
                 Text(
@@ -156,7 +156,7 @@ fun TimerScreen(contentPadding: PaddingValues) {
             Mode.RUNNING, Mode.PAUSED -> {
                 item {
                     Surface(
-                        shape = RoundedCornerShape(28.dp),
+                        shape = RoundedCornerShape(20.dp),
                         color = Palette.Surface,
                         border = BorderStroke(1.dp, Palette.Outline),
                         modifier = Modifier.fillMaxWidth()
@@ -233,7 +233,7 @@ fun TimerScreen(contentPadding: PaddingValues) {
             Mode.RINGING -> {
                 item {
                     Surface(
-                        shape = RoundedCornerShape(28.dp),
+                        shape = RoundedCornerShape(20.dp),
                         color = Palette.AccentSoft,
                         border = BorderStroke(1.dp, Palette.AccentDim.copy(alpha = 0.35f)),
                         modifier = Modifier.fillMaxWidth()
@@ -303,7 +303,7 @@ private fun DurationPicker(onStart: (Long, String) -> Unit) {
         (seconds.toIntOrNull() ?: 0)) * 1000L
 
     Surface(
-        shape = RoundedCornerShape(28.dp),
+        shape = RoundedCornerShape(20.dp),
         color = Palette.Surface,
         border = BorderStroke(1.dp, Palette.Outline),
         modifier = Modifier.fillMaxWidth()
@@ -355,7 +355,7 @@ private fun DurationPicker(onStart: (Long, String) -> Unit) {
                 label = { Text("Label (optional)") },
                 singleLine = true,
                 colors = curioFieldColors(),
-                shape = RoundedCornerShape(16.dp),
+                shape = RoundedCornerShape(12.dp),
                 modifier = Modifier.fillMaxWidth()
             )
             PrimaryButton(
@@ -383,16 +383,16 @@ private fun DurationField(value: String, onChange: (String) -> Unit, label: Stri
             color = Palette.Text
         ),
         colors = curioFieldColors(),
-        shape = RoundedCornerShape(16.dp),
+        shape = RoundedCornerShape(12.dp),
         modifier = modifier
     )
 }
 
-/** Gold arc shrinking with the remaining fraction; full hairline circle behind it. */
+/** Accent arc shrinking with the remaining fraction; full hairline circle behind it. */
 @Composable
 private fun CountdownArc(fraction: Float, paused: Boolean) {
     val track = Palette.Outline
-    val gold = if (paused) Palette.Muted else Palette.Accent
+    val arcColor = if (paused) Palette.Muted else Palette.Accent
     Canvas(Modifier.fillMaxSize()) {
         val stroke = 7.dp.toPx()
         val inset = stroke / 2f
@@ -407,7 +407,7 @@ private fun CountdownArc(fraction: Float, paused: Boolean) {
             style = Stroke(width = 2.dp.toPx())
         )
         drawArc(
-            color = gold,
+            color = arcColor,
             startAngle = -90f,
             sweepAngle = (fraction.coerceIn(0f, 1f) * 360f),
             useCenter = false,
