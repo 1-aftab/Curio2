@@ -1,7 +1,6 @@
 package com.aftab.curioalarm.ui
 
 import android.app.NotificationManager
-import android.content.ActivityNotFoundException
 import android.content.Context
 import android.content.Intent
 import android.net.Uri
@@ -65,9 +64,11 @@ object Permissions {
             PermissionKind.BATTERY ->
                 Intent(Settings.ACTION_REQUEST_IGNORE_BATTERY_OPTIMIZATIONS, pkg)
         }
+        // Some OEM builds throw SecurityException or other RuntimeExceptions for these
+        // settings intents — a permission helper must never crash the app.
         try {
             context.startActivity(intent)
-        } catch (_: ActivityNotFoundException) {
+        } catch (_: Exception) {
             runCatching { context.startActivity(details) }
         }
     }

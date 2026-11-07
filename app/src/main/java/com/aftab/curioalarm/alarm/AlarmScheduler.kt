@@ -47,7 +47,17 @@ class AlarmScheduler(private val context: Context) {
     }
 
     fun cancel(alarm: Alarm) {
-        alarmManager.cancel(firePendingIntent(alarm.id, 0L))
+        // FLAG_NO_CREATE: cancelling must never create a fresh PendingIntent nor overwrite
+        // the trigger-time extras of one that is still scheduled.
+        val existing = PendingIntent.getBroadcast(
+            context, alarm.id,
+            Intent(context, AlarmReceiver::class.java).setAction(ACTION_FIRE),
+            PendingIntent.FLAG_NO_CREATE or PendingIntent.FLAG_IMMUTABLE
+        )
+        if (existing != null) {
+            alarmManager.cancel(existing)
+            existing.cancel()
+        }
     }
 
     private fun firePendingIntent(alarmId: Int, triggerAt: Long): PendingIntent {

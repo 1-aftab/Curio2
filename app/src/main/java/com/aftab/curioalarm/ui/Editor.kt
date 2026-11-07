@@ -18,6 +18,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.imePadding
+import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
@@ -25,22 +26,35 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.Check
+import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilterChip
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.SegmentedButton
+import androidx.compose.material3.SegmentedButtonDefaults
+import androidx.compose.material3.SingleChoiceSegmentedButtonRow
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
+import androidx.compose.material3.TimeInput
 import androidx.compose.material3.TimePicker
 import androidx.compose.material3.rememberTimePickerState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -48,14 +62,20 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.aftab.curioalarm.Graph
 import com.aftab.curioalarm.data.Alarm
 import com.aftab.curioalarm.data.ChallengeType
 import com.aftab.curioalarm.data.Difficulty
 import com.aftab.curioalarm.data.SoundStore
 import java.io.File
+import java.time.Instant
+import java.time.ZoneId
+import java.time.ZonedDateTime
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
@@ -73,17 +93,23 @@ fun AlarmEditor(
     val is24 = remember { DateFormat.is24HourFormat(ctx) }
     val timeState = rememberTimePickerState(initial.hour, initial.minute, is24)
 
-    var label by remember { mutableStateOf(initial.label) }
-    var days by remember { mutableStateOf(initial.days) }
-    var challenges by remember { mutableStateOf(initial.challenges) }
-    var difficulty by remember { mutableStateOf(initial.difficulty) }
-    var vibrate by remember { mutableStateOf(initial.vibrate) }
-    var gradual by remember { mutableStateOf(initial.gradualVolume) }
-    var hardMode by remember { mutableStateOf(initial.hardMode) }
-    var soundPath by remember { mutableStateOf(initial.soundPath) }
-    var soundName by remember { mutableStateOf(initial.soundName) }
+    // Saveable state: the editor survives process death while open.
+    var label by rememberSaveable { mutableStateOf(initial.label) }
+    var dayList by rememberSaveable { mutableStateOf(initial.days.sorted()) }
+    var challengeNames by rememberSaveable { mutableStateOf(initial.challenges.map { it.name }) }
+    var difficultyName by rememberSaveable { mutableStateOf(initial.difficulty.name) }
+    var vibrate by rememberSaveable { mutableStateOf(initial.vibrate) }
+    var gradual by rememberSaveable { mutableStateOf(initial.gradualVolume) }
+    var kiosk by rememberSaveable { mutableStateOf(initial.hardMode) }
+    var soundPath by rememberSaveable { mutableStateOf(initial.soundPath) }
+    var soundName by rememberSaveable { mutableStateOf(initial.soundName) }
+    var dialMode by rememberSaveable { mutableStateOf(true) }
     var confirmDelete by remember { mutableStateOf(false) }
     var importing by remember { mutableStateOf(false) }
+
+    val days = dayList.toSet()
+    val challenges = challengeNames.mapNotNull { n -> ChallengeType.entries.firstOrNull { it.name == n } }.toSet()
+    val difficulty = Difficulty.entries.firstOrNull { it.name == difficultyName } ?: Difficulty.MEDIUM
 
     val preview = remember { SoundPreview(ctx) }
     DisposableEffect(Unit) { onDispose { preview.stop() } }
@@ -107,7 +133,27 @@ fun AlarmEditor(
 
     val soundMissing = soundPath != null && !File(soundPath!!).exists()
 
-    Surface(color = Palette.Black, modifier = Modifier.fillMaxSize()) {
+    fun save() {
+        preview.stop()
+        onSave(
+            initial.copy(
+                hour = timeState.hour,
+                minute = timeState.minute,
+                label = label.trim(),
+                enabled = true,
+                days = days,
+                soundPath = soundPath,
+                soundName = soundName,
+                challenges = challenges.ifEmpty { setOf(ChallengeType.MATH) },
+                difficulty = difficulty,
+                vibrate = vibrate,
+                gradualVolume = gradual,
+                hardMode = kiosk
+            )
+        )
+    }
+
+    Surface(color = Palette.Ink, modifier = Modifier.fillMaxSize()) {
         Column(
             Modifier
                 .fillMaxSize()
@@ -117,45 +163,67 @@ fun AlarmEditor(
         ) {
             // ---- top bar
             Row(
-                Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 8.dp),
+                Modifier.fillMaxWidth().padding(horizontal = 8.dp, vertical = 6.dp),
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                TextButton(onClick = onClose) { Text("Cancel", color = Palette.Muted) }
+                IconButton(onClick = onClose) {
+                    Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Close", tint = Palette.Muted)
+                }
                 Text(
                     if (isNew) "New alarm" else "Edit alarm",
                     color = Palette.Text,
                     fontFamily = FontFamily.Serif,
                     fontSize = 20.sp,
                     modifier = Modifier.weight(1f),
-                    textAlign = androidx.compose.ui.text.style.TextAlign.Center
+                    textAlign = TextAlign.Center
                 )
-                TextButton(onClick = {
-                    preview.stop()
-                    onSave(
-                        initial.copy(
-                            hour = timeState.hour,
-                            minute = timeState.minute,
-                            label = label.trim(),
-                            enabled = true,
-                            days = days,
-                            soundPath = soundPath,
-                            soundName = soundName,
-                            challenges = challenges,
-                            difficulty = difficulty,
-                            vibrate = vibrate,
-                            gradualVolume = gradual,
-                            hardMode = hardMode
-                        )
+                TextButton(onClick = { save() }, enabled = !importing) {
+                    Text(
+                        "Save",
+                        color = if (importing) Palette.Muted else Palette.Accent,
+                        fontWeight = FontWeight.SemiBold
                     )
-                }) { Text("Save", color = Palette.Silver, fontWeight = FontWeight.Medium) }
+                }
             }
 
             // ---- time
-            Box(Modifier.fillMaxWidth().padding(vertical = 12.dp), contentAlignment = Alignment.Center) {
-                TimePicker(state = timeState)
+            Surface(
+                shape = RoundedCornerShape(28.dp),
+                color = Palette.Surface,
+                border = BorderStroke(1.dp, Palette.Outline),
+                modifier = Modifier.fillMaxWidth().padding(horizontal = 20.dp, vertical = 10.dp)
+            ) {
+                Column(
+                    Modifier.padding(vertical = 20.dp, horizontal = 12.dp),
+                    horizontalAlignment = Alignment.CenterHorizontally
+                ) {
+                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        FilterChip(
+                            selected = dialMode,
+                            onClick = { dialMode = true },
+                            label = { Text("Dial") },
+                            shape = RoundedCornerShape(12.dp),
+                            colors = curioChipColors()
+                        )
+                        FilterChip(
+                            selected = !dialMode,
+                            onClick = { dialMode = false },
+                            label = { Text("Keyboard") },
+                            shape = RoundedCornerShape(12.dp),
+                            colors = curioChipColors()
+                        )
+                    }
+                    Spacer(Modifier.height(16.dp))
+                    if (dialMode) TimePicker(state = timeState) else TimeInput(state = timeState)
+                    Spacer(Modifier.height(12.dp))
+                    RingsInHint(timeState.hour, timeState.minute, days)
+                }
             }
 
-            Column(Modifier.padding(horizontal = 20.dp), verticalArrangement = Arrangement.spacedBy(28.dp)) {
+            Column(
+                Modifier.padding(horizontal = 20.dp, vertical = 12.dp),
+                verticalArrangement = Arrangement.spacedBy(26.dp)
+            ) {
 
                 // ---- label
                 OutlinedTextField(
@@ -171,26 +239,34 @@ fun AlarmEditor(
                 // ---- repeat
                 Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
                     SectionLabel("Repeat")
+                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        RepeatPreset("Once", emptyList(), dayList) { dayList = it }
+                        RepeatPreset("Weekdays", listOf(1, 2, 3, 4, 5), dayList) { dayList = it }
+                        RepeatPreset("Weekends", listOf(6, 7), dayList) { dayList = it }
+                        RepeatPreset("Daily", listOf(1, 2, 3, 4, 5, 6, 7), dayList) { dayList = it }
+                    }
                     val names = listOf("M", "T", "W", "T", "F", "S", "S")
                     Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
                         for (day in 1..7) {
                             val selected = day in days
                             val bg by animateColorAsState(
-                                if (selected) Palette.Silver else Palette.Surface, label = "day"
+                                if (selected) Palette.Accent else Palette.Surface, label = "day"
                             )
                             Box(
                                 Modifier
                                     .size(42.dp)
                                     .clip(CircleShape)
                                     .background(bg)
-                                    .border(1.dp, if (selected) Palette.Silver else Palette.Outline2, CircleShape)
-                                    .clickable { days = if (selected) days - day else days + day },
+                                    .border(1.dp, if (selected) Palette.Accent else Palette.Outline2, CircleShape)
+                                    .clickable {
+                                        dayList = if (selected) dayList - day else (dayList + day).sorted()
+                                    },
                                 contentAlignment = Alignment.Center
                             ) {
                                 Text(
                                     names[day - 1],
-                                    color = if (selected) Palette.Black else Palette.Muted,
-                                    fontWeight = FontWeight.Medium
+                                    color = if (selected) Palette.Ink else Palette.Muted,
+                                    fontWeight = FontWeight.SemiBold
                                 )
                             }
                         }
@@ -206,30 +282,49 @@ fun AlarmEditor(
                 Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
                     SectionLabel("Sound")
                     Surface(
-                        shape = RoundedCornerShape(20.dp),
+                        shape = RoundedCornerShape(22.dp),
                         color = Palette.Surface,
                         border = BorderStroke(1.dp, Palette.Outline),
                         modifier = Modifier.fillMaxWidth()
                     ) {
                         Column(Modifier.padding(18.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                            Text(
-                                if (importing) "Importing…" else (soundName ?: "Default alarm tone"),
-                                color = Palette.Text,
-                                fontSize = 15.sp,
-                                maxLines = 1
-                            )
-                            if (soundMissing) {
-                                Text(
-                                    "This file is unavailable. The default tone will play instead.",
-                                    color = Palette.Muted,
-                                    fontSize = 12.sp
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(12.dp)
+                            ) {
+                                GlyphBadge("♫")
+                                Column(Modifier.weight(1f)) {
+                                    Text(
+                                        if (importing) "Importing…" else (soundName ?: "Default alarm tone"),
+                                        color = Palette.Text,
+                                        fontSize = 15.sp,
+                                        maxLines = 1
+                                    )
+                                    Text(
+                                        when {
+                                            importing -> "Copying into app storage"
+                                            soundMissing -> "File unavailable — the default tone will play"
+                                            soundPath != null -> "Custom sound"
+                                            else -> "Built-in"
+                                        },
+                                        color = if (soundMissing) Palette.Danger else Palette.Muted,
+                                        fontSize = 12.sp
+                                    )
+                                }
+                            }
+                            if (importing) {
+                                LinearProgressIndicator(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    color = Palette.Accent,
+                                    trackColor = Palette.SurfaceHigh
                                 )
                             }
                             Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                                 GhostButton(
                                     "Choose file",
                                     onClick = { picker.launch(arrayOf("audio/*", "application/ogg")) },
-                                    modifier = Modifier.weight(1f)
+                                    modifier = Modifier.weight(1f),
+                                    enabled = !importing
                                 )
                                 GhostButton(
                                     if (preview.playing) "Stop" else "Preview",
@@ -238,10 +333,11 @@ fun AlarmEditor(
                                             Toast.makeText(ctx, "Can't play that sound", Toast.LENGTH_SHORT).show()
                                         }
                                     },
-                                    modifier = Modifier.weight(1f)
+                                    modifier = Modifier.weight(1f),
+                                    enabled = !importing
                                 )
                             }
-                            if (soundPath != null) {
+                            if (soundPath != null && !importing) {
                                 TextButton(onClick = {
                                     preview.stop()
                                     soundPath = null
@@ -257,58 +353,129 @@ fun AlarmEditor(
                 // ---- challenge
                 Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
                     SectionLabel("Dismissal challenge")
-                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                        ChallengeType.values().forEach { type ->
-                            FilterChip(
-                                selected = type in challenges,
-                                onClick = {
-                                    val selected = type in challenges
-                                    if (!(selected && challenges.size == 1)) {
-                                        challenges = if (selected) challenges - type else challenges + type
+                    val glyphs = mapOf(
+                        ChallengeType.MATH to "×",
+                        ChallengeType.MEMORY to "◆",
+                        ChallengeType.PHRASE to "Aa"
+                    )
+                    ChallengeType.entries.forEach { type ->
+                        val selected = type in challenges
+                        val border by animateColorAsState(
+                            if (selected) Palette.AccentDim.copy(alpha = 0.6f) else Palette.Outline,
+                            label = "challengeBorder"
+                        )
+                        val shape = RoundedCornerShape(20.dp)
+                        Surface(
+                            shape = shape,
+                            color = if (selected) Palette.AccentSoft else Palette.Surface,
+                            border = BorderStroke(1.dp, border),
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .clip(shape)
+                                .clickable {
+                                    challengeNames = if (selected) {
+                                        if (challengeNames.size > 1) challengeNames - type.name else challengeNames
+                                    } else {
+                                        challengeNames + type.name
                                     }
-                                },
-                                label = { Text(type.title) },
-                                shape = RoundedCornerShape(14.dp),
-                                colors = curioChipColors()
-                            )
+                                }
+                        ) {
+                            Row(
+                                Modifier.padding(14.dp),
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(12.dp)
+                            ) {
+                                GlyphBadge(glyphs[type] ?: "?")
+                                Column(Modifier.weight(1f)) {
+                                    Text(type.title, color = Palette.Text, fontSize = 15.sp, fontWeight = FontWeight.Medium)
+                                    Text(type.blurb, color = Palette.Muted, fontSize = 12.sp)
+                                }
+                                Box(
+                                    Modifier
+                                        .size(24.dp)
+                                        .clip(CircleShape)
+                                        .background(if (selected) Palette.Accent else Palette.SurfaceHigh)
+                                        .border(1.dp, if (selected) Palette.Accent else Palette.Outline2, CircleShape),
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    if (selected) {
+                                        Icon(
+                                            Icons.Default.Check,
+                                            contentDescription = null,
+                                            tint = Palette.Ink,
+                                            modifier = Modifier.size(15.dp)
+                                        )
+                                    }
+                                }
+                            }
                         }
                     }
                     Text(
-                        if (challenges.size == 1) challenges.first().blurb
-                        else "One is picked at random each time the alarm rings",
+                        if (challenges.size <= 1) "At least one challenge is always kept selected"
+                        else "One of the ${challenges.size} is picked at random each time the alarm rings",
                         color = Palette.Muted,
                         fontSize = 12.sp
                     )
-                    SectionLabel("Difficulty", Modifier.padding(top = 8.dp))
-                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                        Difficulty.values().forEach { d ->
-                            FilterChip(
+                    SectionLabel("Difficulty", Modifier.padding(top = 4.dp))
+                    SingleChoiceSegmentedButtonRow(Modifier.fillMaxWidth()) {
+                        Difficulty.entries.forEachIndexed { index, d ->
+                            SegmentedButton(
                                 selected = d == difficulty,
-                                onClick = { difficulty = d },
-                                label = { Text(d.title) },
-                                shape = RoundedCornerShape(14.dp),
-                                colors = curioChipColors()
-                            )
+                                onClick = { difficultyName = d.name },
+                                shape = SegmentedButtonDefaults.itemShape(index = index, count = Difficulty.entries.size),
+                                colors = SegmentedButtonDefaults.colors(
+                                    activeContainerColor = Palette.Accent,
+                                    activeContentColor = Palette.Ink,
+                                    inactiveContainerColor = Palette.Surface,
+                                    inactiveContentColor = Palette.Muted,
+                                    activeBorderColor = Palette.Accent,
+                                    inactiveBorderColor = Palette.Outline2
+                                ),
+                                icon = {}
+                            ) { Text(d.title, fontSize = 13.sp) }
                         }
                     }
                 }
 
-                // ---- mode
+                // ---- kiosk mode
                 Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
                     SectionLabel("Mode")
-                    ToggleRow("Kiosk mode", hardMode) { hardMode = it }
-                    Text(
-                        if (hardMode) "Opens the task screen straight away and tries to lock the phone to it until the task is done"
-                        else "Normal: the alarm rings with the task screen as usual",
-                        color = Palette.Muted,
-                        fontSize = 12.sp
-                    )
+                    Surface(
+                        shape = RoundedCornerShape(22.dp),
+                        color = Palette.Surface,
+                        border = BorderStroke(1.dp, Palette.Outline),
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Row(
+                            Modifier.padding(16.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(12.dp)
+                        ) {
+                            Icon(Icons.Default.Lock, contentDescription = null, tint = if (kiosk) Palette.Accent else Palette.Muted)
+                            Column(Modifier.weight(1f)) {
+                                Text("Kiosk mode", color = Palette.Text, fontSize = 15.sp)
+                                Text(
+                                    if (kiosk) "Opens the task screen immediately and pins it where Android allows"
+                                    else "Normal: the alarm rings with the task screen as usual",
+                                    color = Palette.Muted,
+                                    fontSize = 12.sp
+                                )
+                            }
+                            Switch(checked = kiosk, onCheckedChange = { kiosk = it }, colors = curioSwitchColors())
+                        }
+                    }
                 }
 
                 if (!isNew) {
-                    GhostButton("Delete alarm", onClick = { confirmDelete = true }, modifier = Modifier.fillMaxWidth())
+                    androidx.compose.material3.OutlinedButton(
+                        onClick = { confirmDelete = true },
+                        modifier = Modifier.fillMaxWidth().height(48.dp),
+                        shape = RoundedCornerShape(16.dp),
+                        border = BorderStroke(1.dp, Palette.Danger.copy(alpha = 0.45f)),
+                        colors = androidx.compose.material3.ButtonDefaults.outlinedButtonColors(contentColor = Palette.Danger)
+                    ) { Text("Delete alarm") }
                 }
-                Spacer(Modifier.height(40.dp))
+                Spacer(Modifier.navigationBarsPadding().height(32.dp))
             }
         }
     }
@@ -316,14 +483,14 @@ fun AlarmEditor(
     if (confirmDelete) {
         AlertDialog(
             onDismissRequest = { confirmDelete = false },
-            containerColor = Palette.Surface,
+            containerColor = Palette.SurfaceHigh,
             titleContentColor = Palette.Text,
             textContentColor = Palette.Muted,
             title = { Text("Delete this alarm?") },
             text = { Text("This can't be undone.") },
             confirmButton = {
                 TextButton(onClick = { confirmDelete = false; preview.stop(); onDelete() }) {
-                    Text("Delete", color = Palette.Text)
+                    Text("Delete", color = Palette.Danger)
                 }
             },
             dismissButton = {
@@ -331,6 +498,40 @@ fun AlarmEditor(
             }
         )
     }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun RepeatPreset(title: String, preset: List<Int>, current: List<Int>, onPick: (List<Int>) -> Unit) {
+    FilterChip(
+        selected = current == preset,
+        onClick = { onPick(preset) },
+        label = { Text(title, fontSize = 12.sp) },
+        shape = RoundedCornerShape(12.dp),
+        colors = curioChipColors()
+    )
+}
+
+@Composable
+private fun RingsInHint(hour: Int, minute: Int, days: Set<Int>) {
+    val now by produceState(System.currentTimeMillis()) {
+        while (true) {
+            delay(30_000)
+            value = System.currentTimeMillis()
+        }
+    }
+    val trigger = remember(hour, minute, days, now) {
+        Graph.scheduler.nextTrigger(
+            Alarm(hour = hour, minute = minute, days = days),
+            ZonedDateTime.ofInstant(Instant.ofEpochMilli(now), ZoneId.systemDefault())
+        ).toInstant().toEpochMilli()
+    }
+    Text(
+        "Rings in " + Fmt.untilText(trigger - now),
+        color = Palette.AccentDim,
+        fontSize = 13.sp,
+        letterSpacing = 0.3.sp
+    )
 }
 
 @Composable
