@@ -157,7 +157,7 @@ fun PhraseChallenge(puzzle: Puzzle.Phrase, onSolved: () -> Unit) {
             colors = curioFieldColors(),
             keyboardOptions = KeyboardOptions(
                 capitalization = KeyboardCapitalization.None,
-                autoCorrectEnabled = false,
+                autoCorrect = false,
                 keyboardType = KeyboardType.Text,
                 imeAction = ImeAction.Done
             ),

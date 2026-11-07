@@ -30,7 +30,32 @@ jobs:
           gradle-version: "8.9"
 
       - name: Build debug APK and run unit tests
-        run: gradle assembleDebug testDebugUnitTest --stacktrace --no-daemon
+        run: |
+          set -o pipefail
+          gradle assembleDebug testDebugUnitTest --stacktrace --no-daemon 2>&1 | tee build.log
+
+      - name: Surface build errors as annotations
+        if: failure()
+        run: |
+          python3 - <<'PY'
+          import os, re
+          try:
+              log = open('build.log', encoding='utf-8', errors='replace').read()
+          except OSError:
+              log = ''
+          lines = log.splitlines()
+          errors = [l for l in lines if l.startswith('e: ') or ' error:' in l]
+          for l in errors[:25]:
+              msg = l.replace('\r', '')
+              print(f'::error::{msg[:2000]}')
+          # One annotation with the failure context (readable via the checks API).
+          idx = next((i for i, l in enumerate(lines) if 'What went wrong' in l or 'FAILURE:' in l), max(0, len(lines) - 80))
+          context = '\n'.join(lines[idx:idx + 80])[:60000]
+          if context:
+              print('::error::Build failure context:%0A' + context.replace('\n', '%0A'))
+          with open(os.environ['GITHUB_STEP_SUMMARY'], 'a') as f:
+              f.write('## Build errors\n\n```\n' + '\n'.join(errors[:50]) + '\n```\n')
+          PY
 
       - name: Upload debug APK
         uses: actions/upload-artifact@v4
