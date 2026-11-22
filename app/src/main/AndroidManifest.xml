@@ -46,6 +46,7 @@
         <service
             android:name=".alarm.AlarmService"
             android:exported="false"
+            android:stopWithTask="false"
             android:foregroundServiceType="mediaPlayback" />
 
         <receiver
@@ -54,6 +55,10 @@
 
         <receiver
             android:name=".alarm.TimerReceiver"
+            android:exported="false" />
+
+        <receiver
+            android:name=".alarm.RingWatchdogReceiver"
             android:exported="false" />
 
         <receiver

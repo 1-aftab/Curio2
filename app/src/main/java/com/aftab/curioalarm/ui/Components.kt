@@ -15,6 +15,9 @@ import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilterChipDefaults
+import androidx.compose.material3.SegmentedButton
+import androidx.compose.material3.SegmentedButtonDefaults
+import androidx.compose.material3.SingleChoiceSegmentedButtonRow
 import androidx.compose.material3.Icon
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextFieldDefaults
@@ -32,6 +35,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.aftab.curioalarm.data.AlertMode
 
 @Composable
 fun SectionLabel(text: String, modifier: Modifier = Modifier) {
@@ -150,7 +154,34 @@ fun curioSwitchColors() = SwitchDefaults.colors(
     uncheckedBorderColor = Palette.Outline2
 )
 
-/** "made with curiosity by Aftab": small muted lead-in, warm gold name. */
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun AlertModePicker(
+    selected: AlertMode,
+    modifier: Modifier = Modifier,
+    onSelect: (AlertMode) -> Unit
+) {
+    SingleChoiceSegmentedButtonRow(modifier.fillMaxWidth()) {
+        AlertMode.entries.forEachIndexed { index, mode ->
+            SegmentedButton(
+                selected = mode == selected,
+                onClick = { onSelect(mode) },
+                shape = SegmentedButtonDefaults.itemShape(index = index, count = AlertMode.entries.size),
+                colors = SegmentedButtonDefaults.colors(
+                    activeContainerColor = Palette.Accent,
+                    activeContentColor = Palette.OnAccent,
+                    inactiveContainerColor = Palette.Surface,
+                    inactiveContentColor = Palette.Muted,
+                    activeBorderColor = Palette.Accent,
+                    inactiveBorderColor = Palette.Outline2
+                ),
+                icon = {}
+            ) { Text(mode.title, fontSize = 13.sp) }
+        }
+    }
+}
+
+/** "made with curiosity by Aftab": small muted lead-in, name in the primary text color. */
 @Composable
 fun CuriosityFooter(modifier: Modifier = Modifier) {
     Row(

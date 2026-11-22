@@ -84,6 +84,7 @@ jobs:
             || { echo "::error::Release APK not found."; exit 1; }
 
       - name: Upload signed release APK
+        continue-on-error: true
         uses: actions/upload-artifact@v4
         with:
           name: CurioAlarm-signed-release-apk

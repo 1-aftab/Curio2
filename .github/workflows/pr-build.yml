@@ -6,7 +6,7 @@ on:
   workflow_dispatch:
 
 permissions:
-  contents: read
+  contents: write
 
 jobs:
   build:
@@ -57,19 +57,29 @@ jobs:
               f.write('## Build errors\n\n```\n' + '\n'.join(errors[:50]) + '\n```\n')
           PY
 
-      - name: Upload debug APK
-        uses: actions/upload-artifact@v4
-        with:
-          name: CurioAlarm-debug-apk
-          path: app/build/outputs/apk/debug/*.apk
-          if-no-files-found: error
-          retention-days: 14
-
-      - name: Upload test results
-        if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: unit-test-results
-          path: app/build/reports/tests/
-          if-no-files-found: ignore
-          retention-days: 14
+      # Actions artifact storage for this account is full (other repos). Do not upload
+      # artifacts. Commit the debug APK onto the PR branch instead so it can be installed
+      # from the repo. [skip ci] keeps that commit from starting another run.
+      - name: Publish debug APK onto the branch
+        if: github.event_name == 'pull_request'
+        run: |
+          set -euo pipefail
+          apk=$(find app/build/outputs/apk/debug -maxdepth 1 -type f -name '*.apk' -print -quit)
+          test -n "$apk"
+          mkdir -p "$RUNNER_TEMP/apk"
+          cp "$apk" "$RUNNER_TEMP/apk/CurioAlarm-debug.apk"
+          sha256sum "$RUNNER_TEMP/apk/CurioAlarm-debug.apk"
+          rm -f build.log
+          git fetch origin "${{ github.head_ref }}:${{ github.head_ref }}"
+          git checkout "${{ github.head_ref }}"
+          mkdir -p dist
+          cp "$RUNNER_TEMP/apk/CurioAlarm-debug.apk" dist/CurioAlarm-debug.apk
+          git add -f dist/CurioAlarm-debug.apk
+          if git diff --cached --quiet; then
+            echo "APK unchanged"
+            exit 0
+          fi
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git config user.name "github-actions[bot]"
+          git commit -m "Add installable debug APK [skip ci]"
+          git push origin "HEAD:${{ github.head_ref }}"

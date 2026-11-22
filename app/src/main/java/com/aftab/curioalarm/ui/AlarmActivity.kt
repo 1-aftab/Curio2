@@ -2,6 +2,7 @@ package com.aftab.curioalarm.ui
 
 import android.os.Build
 import android.os.Bundle
+import android.view.KeyEvent
 import android.view.WindowManager
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.BackHandler
@@ -52,6 +53,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.aftab.curioalarm.Graph
 import com.aftab.curioalarm.alarm.AlarmService
+import com.aftab.curioalarm.alarm.RingSession
 import com.aftab.curioalarm.challenge.ChallengeEngine
 import com.aftab.curioalarm.challenge.Puzzle
 import com.aftab.curioalarm.data.Alarm
@@ -96,22 +98,75 @@ class AlarmActivity : ComponentActivity() {
         super.onDestroy()
     }
 
-    override fun onCreate(savedInstanceState: Bundle?) {
-        super.onCreate(savedInstanceState)
+    override fun onStart() {
+        super.onStart()
+        armWindow()
+        val id = AlarmService.ringing.value ?: RingSession.currentId(this)
+        if (id != null && resolveAlarm(id)?.hardMode == true) tryLockTask()
+    }
+
+    override fun onNewIntent(intent: android.content.Intent) {
+        super.onNewIntent(intent)
+        setIntent(intent)
+        armWindow()
+    }
+
+    /**
+     * Home, Recents, or the power button taking the screen. None of those are a dismiss.
+     * The service turns the screen back on and re-shows this activity.
+     */
+    override fun onUserLeaveHint() {
+        super.onUserLeaveHint()
+        if (!isFinishing && stillOwed()) AlarmService.nudge(applicationContext)
+    }
+
+    override fun onStop() {
+        super.onStop()
+        if (!isFinishing && stillOwed()) AlarmService.nudge(applicationContext)
+    }
+
+    override fun dispatchKeyEvent(event: KeyEvent): Boolean {
+        if (isAlarmKey(event.keyCode)) {
+            if (event.action == KeyEvent.ACTION_DOWN) AlarmService.nudge(applicationContext)
+            return true
+        }
+        return super.dispatchKeyEvent(event)
+    }
+
+    private fun stillOwed(): Boolean =
+        AlarmService.ringing.value != null || RingSession.currentId(this) != null
+
+    private fun isAlarmKey(keyCode: Int): Boolean =
+        keyCode == KeyEvent.KEYCODE_POWER ||
+            keyCode == KeyEvent.KEYCODE_VOLUME_DOWN ||
+            keyCode == KeyEvent.KEYCODE_VOLUME_UP ||
+            keyCode == KeyEvent.KEYCODE_VOLUME_MUTE ||
+            keyCode == KeyEvent.KEYCODE_HEADSETHOOK ||
+            keyCode == KeyEvent.KEYCODE_MEDIA_PLAY_PAUSE ||
+            keyCode == KeyEvent.KEYCODE_MEDIA_STOP
+
+    /** Show over the lock screen and ask for the display, including after the power button. */
+    private fun armWindow() {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O_MR1) {
             setShowWhenLocked(true)
             setTurnScreenOn(true)
-        } else {
-            @Suppress("DEPRECATION")
-            window.addFlags(
-                WindowManager.LayoutParams.FLAG_SHOW_WHEN_LOCKED or
-                    WindowManager.LayoutParams.FLAG_TURN_SCREEN_ON
-            )
         }
-        window.addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
+        @Suppress("DEPRECATION")
+        window.addFlags(
+            WindowManager.LayoutParams.FLAG_SHOW_WHEN_LOCKED or
+                WindowManager.LayoutParams.FLAG_TURN_SCREEN_ON or
+                WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON
+        )
+    }
+
+    override fun onCreate(savedInstanceState: Bundle?) {
+        super.onCreate(savedInstanceState)
+        armWindow()
         enableEdgeToEdge()
 
-        if (AlarmService.ringing.value == null) {
+        // A power-button kill can recreate this screen before the service has published
+        // its id again. The persisted session is enough to stay up and restart the ring.
+        if (AlarmService.ringing.value == null && RingSession.currentId(this) == null) {
             finish()
             return
         }
@@ -125,8 +180,21 @@ class AlarmActivity : ComponentActivity() {
                 LaunchedEffect(ringingId) {
                     val id = ringingId
                     if (id == null) {
-                        releaseLockTask()
-                        finish()
+                        val session = RingSession.currentId(this@AlarmActivity)
+                        if (session == null) {
+                            releaseLockTask()
+                            finish()
+                        } else {
+                            // Service was killed (power button on some phones). Bring it back.
+                            runCatching { AlarmService.start(this@AlarmActivity, session) }
+                            delay(1_500)
+                            if (AlarmService.ringing.value == null &&
+                                RingSession.currentId(this@AlarmActivity) == null
+                            ) {
+                                releaseLockTask()
+                                finish()
+                            }
+                        }
                     } else if (resolveAlarm(id)?.hardMode == true) {
                         tryLockTask()
                     } else {
@@ -230,8 +298,8 @@ private fun RingScreen(alarm: Alarm?, onSolved: () -> Unit) {
             }
             Spacer(Modifier.height(16.dp))
             Text(
-                if (isTimer) "Tap dismiss to stop the ringing."
-                else "The alarm will keep ringing until the challenge is complete.",
+                if (isTimer) "Tap dismiss to stop. The power button will not."
+                else "The alarm keeps ringing until the challenge is solved. The power button will not stop it.",
                 color = Palette.Muted,
                 fontSize = 12.sp
             )

@@ -103,7 +103,7 @@ fun SettingsScreen(
             ) {
                 Column(Modifier.padding(20.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
                     Text("Curio Alarm", color = Palette.Text, fontSize = 15.sp, fontWeight = FontWeight.Medium)
-                    Text("Version 1.0", color = Palette.Muted, fontSize = 12.sp)
+                    Text("Version 1.1", color = Palette.Muted, fontSize = 12.sp)
                     Spacer(Modifier.height(8.dp))
                     Text(
                         "An alarm clock that wakes your brain, not just your hand. Alarms ring until you solve a challenge; timers and the stopwatch live one tap away.",

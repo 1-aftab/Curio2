@@ -11,7 +11,12 @@ Four sections via bottom navigation: **Alarms · Stopwatch · Timer · Settings*
 - **Reliable scheduling** — exact `setAlarmClock` triggers that survive Doze, reboot, app
   updates, and time/timezone changes; missed alarms are reported instead of silently dropped.
 - **Custom sounds** — import any audio file (copied into app-private storage), preview it,
-  fade the volume in gradually, and add vibration.
+  and fade the volume in gradually. Each alarm (and the timer) can ring as **sound + vibration**,
+  **sound only**, or **vibration only**.
+- **Power button does not dismiss** — pressing power, Home, or swiping the notification turns
+  the screen off at most for a moment. The tone keeps going and the challenge comes back.
+  The only way out is solving the challenge (or tapping Dismiss on a timer). Force-stopping
+  the app in system Settings is the one escape Android still allows.
 - **Kiosk mode** — opens the challenge screen immediately and pins it where Android allows,
   for the truly heavy sleepers.
 - **Stopwatch** — lap timing with fastest/slowest highlights; keeps correct time while the
@@ -35,7 +40,10 @@ gradle testDebugUnitTest      # unit tests
 ```
 
 Signed release builds run in CI (`.github/workflows/build.yml`) using repository secrets;
-pull requests are built and tested by `.github/workflows/pr-build.yml`.
+pull requests are built and tested by `.github/workflows/pr-build.yml`. That workflow commits
+`dist/CurioAlarm-debug.apk` onto the branch instead of uploading a GitHub Actions artifact.
+Install that file. If Android says the package conflicts, uninstall the previous Curio Alarm
+first — debug builds are not always signed with the same key.
 
 ## Permissions
 

@@ -55,6 +55,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.aftab.curioalarm.Graph
 import com.aftab.curioalarm.data.Alarm
+import com.aftab.curioalarm.data.AlertMode
 import java.time.LocalDateTime
 import java.time.format.DateTimeFormatter
 import java.util.Locale
@@ -298,7 +299,13 @@ private fun AlarmCard(alarm: Alarm, is24: Boolean, onClick: () -> Unit, onToggle
                 horizontalArrangement = Arrangement.spacedBy(6.dp)
             ) {
                 MetaChip(Fmt.challengeShort(alarm))
-                MetaChip(alarm.soundName ?: "Default tone", Modifier.weight(1f, fill = false))
+                MetaChip(
+                    when (alarm.alertMode) {
+                        AlertMode.VIBRATION -> "Vibration only"
+                        else -> alarm.soundName ?: "Default tone"
+                    },
+                    Modifier.weight(1f, fill = false)
+                )
                 if (alarm.hardMode) MetaChip("Kiosk", icon = Icons.Default.Lock)
             }
         }
