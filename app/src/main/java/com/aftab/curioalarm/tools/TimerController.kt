@@ -8,6 +8,7 @@ import android.os.SystemClock
 import com.aftab.curioalarm.alarm.Notifier
 import com.aftab.curioalarm.alarm.TimerReceiver
 import com.aftab.curioalarm.data.Alarm
+import com.aftab.curioalarm.data.AlertMode
 import com.aftab.curioalarm.ui.MainActivity
 import java.time.LocalTime
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -35,7 +36,8 @@ class TimerController(private val context: Context) {
         val totalMillis: Long = 0L,
         val remainingMillis: Long = 0L,   // valid while PAUSED
         val label: String = "",
-        val lastTotalMillis: Long = 0L    // for the "repeat last" shortcut
+        val lastTotalMillis: Long = 0L,   // for the "repeat last" shortcut
+        val alertMode: AlertMode = AlertMode.SOUND_AND_VIBRATION
     )
 
     private val prefs = context.getSharedPreferences("curio_timer", Context.MODE_PRIVATE)
@@ -52,7 +54,11 @@ class TimerController(private val context: Context) {
         }
     }
 
-    fun start(totalMillis: Long, label: String) {
+    fun start(
+        totalMillis: Long,
+        label: String,
+        alertMode: AlertMode = AlertMode.SOUND_AND_VIBRATION
+    ) {
         if (totalMillis <= 0 || _state.value.mode == Mode.RINGING) return
         val nowE = SystemClock.elapsedRealtime()
         val nowW = System.currentTimeMillis()
@@ -65,7 +71,8 @@ class TimerController(private val context: Context) {
                 savedAtWall = nowW,
                 totalMillis = totalMillis,
                 label = label.trim().take(40),
-                lastTotalMillis = totalMillis
+                lastTotalMillis = totalMillis,
+                alertMode = alertMode
             )
         )
         schedule(nowW + totalMillis)
@@ -125,7 +132,7 @@ class TimerController(private val context: Context) {
         val s = _state.value
         if (s.mode == Mode.RINGING) return   // ringing is stopped via AlarmService.dismiss
         cancelSchedule()
-        setState(State(lastTotalMillis = maxOf(s.lastTotalMillis, s.totalMillis)))
+        setState(s.settled())
     }
 
     /**
@@ -151,7 +158,7 @@ class TimerController(private val context: Context) {
             minute = now.minute,
             label = s.label.ifBlank { "Timer" },
             challenges = emptySet(),   // no challenge: the ring screen shows a Dismiss button
-            vibrate = true,
+            alertMode = s.alertMode,
             gradualVolume = false,
             hardMode = false
         )
@@ -162,7 +169,7 @@ class TimerController(private val context: Context) {
     fun onRingDismissed() {
         val s = _state.value
         if (s.mode == Mode.RINGING) {
-            setState(State(lastTotalMillis = maxOf(s.lastTotalMillis, s.totalMillis)))
+            setState(s.settled())
         }
     }
 
@@ -180,7 +187,7 @@ class TimerController(private val context: Context) {
         if (remaining <= 0) {
             cancelSchedule()
             Notifier.showMissedTimer(context, s.label)
-            setState(State(lastTotalMillis = maxOf(s.lastTotalMillis, s.totalMillis)))
+            setState(s.settled())
         } else {
             setState(s.copy(endElapsed = nowE + remaining, endWall = nowW + remaining, savedAtElapsed = nowE, savedAtWall = nowW))
             schedule(nowW + remaining)
@@ -232,8 +239,16 @@ class TimerController(private val context: Context) {
             put("remainingMillis", s.remainingMillis)
             put("label", s.label)
             put("lastTotalMillis", s.lastTotalMillis)
+            put("alertMode", s.alertMode.name)
         }.toString()).apply()
     }
+
+    /** Idle state that keeps the shortcut (duration, label, alert) from the run that just ended. */
+    private fun State.settled(): State = State(
+        lastTotalMillis = maxOf(lastTotalMillis, totalMillis),
+        label = label,
+        alertMode = alertMode
+    )
 
     private fun load(): State = runCatching {
         val o = JSONObject(prefs.getString(KEY, null) ?: return State())
@@ -246,7 +261,8 @@ class TimerController(private val context: Context) {
             totalMillis = o.optLong("totalMillis"),
             remainingMillis = o.optLong("remainingMillis"),
             label = o.optString("label", ""),
-            lastTotalMillis = o.optLong("lastTotalMillis")
+            lastTotalMillis = o.optLong("lastTotalMillis"),
+            alertMode = AlertMode.parse(o.optString("alertMode", ""))
         )
     }.getOrDefault(State())
 

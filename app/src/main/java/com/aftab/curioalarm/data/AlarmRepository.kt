@@ -126,7 +126,8 @@ class AlarmRepository(context: Context) {
         put("soundName", soundName ?: "")
         put("challenges", JSONArray(challenges.map { it.name }))
         put("difficulty", difficulty.name)
-        put("vibrate", vibrate)
+        put("alertMode", alertMode.name)
+        put("vibrate", alertMode.vibrates) // read by older builds that predate alertMode
         put("gradualVolume", gradualVolume)
         put("scheduledAt", scheduledAt)
         put("lastFiredAt", lastFiredAt)
@@ -158,7 +159,11 @@ class AlarmRepository(context: Context) {
             challenges = challenges,
             difficulty = runCatching { Difficulty.valueOf(optString("difficulty", "MEDIUM")) }
                 .getOrDefault(Difficulty.MEDIUM),
-            vibrate = optBoolean("vibrate", true),
+            alertMode = AlertMode.fromStored(
+                alertModeName = optString("alertMode", ""),
+                hasAlertMode = has("alertMode"),
+                legacyVibrate = optBoolean("vibrate", true)
+            ),
             gradualVolume = optBoolean("gradualVolume", true),
             scheduledAt = optLong("scheduledAt", 0L),
             lastFiredAt = optLong("lastFiredAt", 0L),

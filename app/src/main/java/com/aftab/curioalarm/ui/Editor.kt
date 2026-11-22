@@ -66,6 +66,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.aftab.curioalarm.Graph
 import com.aftab.curioalarm.data.Alarm
+import com.aftab.curioalarm.data.AlertMode
 import com.aftab.curioalarm.data.ChallengeType
 import com.aftab.curioalarm.data.Difficulty
 import com.aftab.curioalarm.data.SoundStore
@@ -97,7 +98,7 @@ fun AlarmEditor(
     var dayList by rememberSaveable { mutableStateOf(initial.days.sorted()) }
     var challengeNames by rememberSaveable { mutableStateOf(initial.challenges.map { it.name }) }
     var difficultyName by rememberSaveable { mutableStateOf(initial.difficulty.name) }
-    var vibrate by rememberSaveable { mutableStateOf(initial.vibrate) }
+    var alertModeName by rememberSaveable { mutableStateOf(initial.alertMode.name) }
     var gradual by rememberSaveable { mutableStateOf(initial.gradualVolume) }
     var kiosk by rememberSaveable { mutableStateOf(initial.hardMode) }
     var soundPath by rememberSaveable { mutableStateOf(initial.soundPath) }
@@ -109,6 +110,7 @@ fun AlarmEditor(
     val days = dayList.toSet()
     val challenges = challengeNames.mapNotNull { n -> ChallengeType.entries.firstOrNull { it.name == n } }.toSet()
     val difficulty = Difficulty.entries.firstOrNull { it.name == difficultyName } ?: Difficulty.MEDIUM
+    val alertMode = AlertMode.parse(alertModeName)
 
     val preview = remember { SoundPreview(ctx) }
     DisposableEffect(Unit) { onDispose { preview.stop() } }
@@ -145,7 +147,7 @@ fun AlarmEditor(
                 soundName = soundName,
                 challenges = challenges.ifEmpty { setOf(ChallengeType.MATH) },
                 difficulty = difficulty,
-                vibrate = vibrate,
+                alertMode = alertMode,
                 gradualVolume = gradual,
                 hardMode = kiosk
             )
@@ -277,9 +279,15 @@ fun AlarmEditor(
                     )
                 }
 
-                // ---- sound
+                // ---- alert
                 Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                    SectionLabel("Sound")
+                    SectionLabel("Alert")
+                    AlertModePicker(alertMode) { mode ->
+                        alertModeName = mode.name
+                        if (!mode.playsSound) preview.stop()
+                    }
+                    Text(alertMode.blurb, color = Palette.Muted, fontSize = 12.sp)
+                    if (alertMode.playsSound) {
                     Surface(
                         shape = RoundedCornerShape(16.dp),
                         color = Palette.Surface,
@@ -345,8 +353,8 @@ fun AlarmEditor(
                             }
                         }
                     }
-                    ToggleRow("Vibrate", vibrate) { vibrate = it }
                     ToggleRow("Gradually raise volume", gradual) { gradual = it }
+                    }
                 }
 
                 // ---- challenge

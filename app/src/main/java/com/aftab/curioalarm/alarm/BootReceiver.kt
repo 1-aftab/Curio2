@@ -15,6 +15,10 @@ class BootReceiver : BroadcastReceiver() {
             Intent.ACTION_TIMEZONE_CHANGED -> {
                 Graph.controller.restoreAll()
                 Graph.timer.restore()
+                // A reboot is not a dismiss. If a challenge was still owed, ring again.
+                RingSession.currentId(context)?.let { id ->
+                    runCatching { AlarmService.start(context, id) }
+                }
             }
         }
     }

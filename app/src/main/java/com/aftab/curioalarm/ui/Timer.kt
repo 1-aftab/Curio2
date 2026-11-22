@@ -46,6 +46,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.aftab.curioalarm.Graph
+import com.aftab.curioalarm.data.AlertMode
 import com.aftab.curioalarm.alarm.AlarmService
 import com.aftab.curioalarm.tools.TimerController
 import com.aftab.curioalarm.tools.TimerController.Mode
@@ -126,14 +127,18 @@ fun TimerScreen(contentPadding: PaddingValues) {
 
         when (state.mode) {
             Mode.IDLE -> {
-                item { DurationPicker(onStart = { ms, label -> controller.start(ms, label) }) }
+                item {
+                    DurationPicker(initialMode = state.alertMode) { ms, label, mode ->
+                        controller.start(ms, label, mode)
+                    }
+                }
                 if (state.lastTotalMillis > 0) {
                     item {
                         Row(verticalAlignment = Alignment.CenterVertically) {
                             SectionLabel("Repeat last", Modifier.weight(1f))
                             FilterChip(
                                 selected = false,
-                                onClick = { controller.start(state.lastTotalMillis, state.label) },
+                                onClick = { controller.start(state.lastTotalMillis, state.label, state.alertMode) },
                                 label = { Text(Fmt.countdown(state.lastTotalMillis)) },
                                 colors = curioChipColors(),
                                 border = BorderStroke(1.dp, Palette.Outline2)
@@ -287,11 +292,13 @@ fun TimerScreen(contentPadding: PaddingValues) {
 /** Idle state: hour/minute/second fields, quick presets and an optional label. */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-private fun DurationPicker(onStart: (Long, String) -> Unit) {
+private fun DurationPicker(initialMode: AlertMode, onStart: (Long, String, AlertMode) -> Unit) {
     var hours by rememberSaveable { mutableStateOf("0") }
     var minutes by rememberSaveable { mutableStateOf("5") }
     var seconds by rememberSaveable { mutableStateOf("0") }
     var label by rememberSaveable { mutableStateOf("") }
+    var alertModeName by rememberSaveable { mutableStateOf(initialMode.name) }
+    val alertMode = AlertMode.parse(alertModeName)
 
     fun sanitized(v: String, max: Int): String {
         val digits = v.filter { it.isDigit() }.take(2)
@@ -358,9 +365,14 @@ private fun DurationPicker(onStart: (Long, String) -> Unit) {
                 shape = RoundedCornerShape(12.dp),
                 modifier = Modifier.fillMaxWidth()
             )
+            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                SectionLabel("When it ends")
+                AlertModePicker(alertMode) { alertModeName = it.name }
+                Text(alertMode.blurb, color = Palette.Muted, fontSize = 12.sp)
+            }
             PrimaryButton(
                 if (total > 0) "Start · ${Fmt.countdown(total)}" else "Start",
-                onClick = { onStart(total, label) },
+                onClick = { onStart(total, label, alertMode) },
                 enabled = total > 0,
                 modifier = Modifier.fillMaxWidth()
             )
