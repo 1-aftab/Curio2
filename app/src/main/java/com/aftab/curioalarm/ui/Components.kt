@@ -158,8 +158,8 @@ fun curioSwitchColors() = SwitchDefaults.colors(
 @Composable
 fun AlertModePicker(
     selected: AlertMode,
-    onSelect: (AlertMode) -> Unit,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    onSelect: (AlertMode) -> Unit
 ) {
     SingleChoiceSegmentedButtonRow(modifier.fillMaxWidth()) {
         AlertMode.entries.forEachIndexed { index, mode ->

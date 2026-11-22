@@ -84,6 +84,11 @@ class AlarmService : Service() {
         }
     }
 
+    private fun startPlaybackWatch() {
+        handler.removeCallbacks(playbackWatch)
+        handler.postDelayed(playbackWatch, 2_000)
+    }
+
     override fun onBind(intent: Intent?): IBinder? = null
 
     override fun onCreate() {
