@@ -23,7 +23,7 @@ Four sections via bottom navigation: **Alarms · Stopwatch · Timer · Settings*
 - **Quick alarms** — 15 min, 30 min, or 1 hour from the home screen. One-shot, with a single
   9-minute snooze.
 - **Wake streak** — consecutive mornings you actually solved the challenge.
-- **First-run consent and tour** — permissions are explained before they are requested.
+- **First-run consent and tour** — permissions are explained before they are requested. The tour and consent screens are interactive; the checkbox still gates setup.
   Replay either from Settings. A short developer note sits under About.
 - **Kiosk mode** — opens the challenge screen immediately and pins it where Android allows,
   for the truly heavy sleepers.
