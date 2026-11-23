@@ -7,6 +7,17 @@ import com.aftab.curioalarm.Graph
 
 class AlarmReceiver : BroadcastReceiver() {
     override fun onReceive(context: Context, intent: Intent) {
+        if (intent.action == AlarmScheduler.ACTION_SNOOZE) {
+            val id = intent.getIntExtra(AlarmScheduler.EXTRA_ALARM_ID, -1)
+            SnoozeStore.clearPending(context, id)
+            val alarm = Graph.repo.get(id) ?: return
+            try {
+                AlarmService.start(context, alarm.id)
+            } catch (e: Exception) {
+                Notifier.showMissed(context, alarm)
+            }
+            return
+        }
         if (intent.action != AlarmScheduler.ACTION_FIRE) return
         val id = intent.getIntExtra(AlarmScheduler.EXTRA_ALARM_ID, -1)
         val triggerAt = intent.getLongExtra(AlarmScheduler.EXTRA_TRIGGER_AT, 0L)

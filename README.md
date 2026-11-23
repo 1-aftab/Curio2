@@ -1,6 +1,6 @@
 # Curio Alarm
 
-A minimal, dark-by-design Android clock that only stops ringing when you wake your
+A minimal black-and-white Android clock that only stops ringing when you wake your
 brain up: every alarm is dismissed by solving a **math**, **memory**, or **phrase** challenge.
 Four sections via bottom navigation: **Alarms · Stopwatch · Timer · Settings**.
 
@@ -17,6 +17,14 @@ Four sections via bottom navigation: **Alarms · Stopwatch · Timer · Settings*
   the screen off at most for a moment. The tone keeps going and the challenge comes back.
   The only way out is solving the challenge (or tapping Dismiss on a timer). Force-stopping
   the app in system Settings is the one escape Android still allows.
+- **Limited snooze** — off on alarms you already saved. New alarms and quick alarms can snooze
+  5, 9, or 15 minutes, up to three times. Kiosk mode never snoozes. After the last one, only
+  the challenge stops it.
+- **Quick alarms** — 15 min, 30 min, or 1 hour from the home screen. One-shot, with a single
+  9-minute snooze.
+- **Wake streak** — consecutive mornings you actually solved the challenge.
+- **First-run consent and tour** — permissions are explained before they are requested.
+  Replay either from Settings. A short developer note sits under About.
 - **Kiosk mode** — opens the challenge screen immediately and pins it where Android allows,
   for the truly heavy sleepers.
 - **Stopwatch** — lap timing with fastest/slowest highlights; keeps correct time while the

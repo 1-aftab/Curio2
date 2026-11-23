@@ -129,6 +129,8 @@ class AlarmRepository(context: Context) {
         put("alertMode", alertMode.name)
         put("vibrate", alertMode.vibrates) // read by older builds that predate alertMode
         put("gradualVolume", gradualVolume)
+        put("snoozeMinutes", snoozeMinutes)
+        put("snoozeLimit", snoozeLimit)
         put("scheduledAt", scheduledAt)
         put("lastFiredAt", lastFiredAt)
         put("hardMode", hardMode)
@@ -165,6 +167,8 @@ class AlarmRepository(context: Context) {
                 legacyVibrate = optBoolean("vibrate", true)
             ),
             gradualVolume = optBoolean("gradualVolume", true),
+            snoozeMinutes = com.aftab.curioalarm.alarm.SnoozeRules.sanitizeMinutes(optInt("snoozeMinutes", 0)),
+            snoozeLimit = com.aftab.curioalarm.alarm.SnoozeRules.sanitizeLimit(optInt("snoozeLimit", 1)),
             scheduledAt = optLong("scheduledAt", 0L),
             lastFiredAt = optLong("lastFiredAt", 0L),
             hardMode = optBoolean("hardMode", false)

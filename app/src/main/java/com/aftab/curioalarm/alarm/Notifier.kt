@@ -46,6 +46,26 @@ object Notifier {
         }
     }
 
+    fun showSnoozed(context: Context, alarm: Alarm, atMillis: Long) {
+        ensureChannels(context)
+        val time = DateTimeFormatter.ofLocalizedTime(FormatStyle.SHORT)
+            .format(java.time.Instant.ofEpochMilli(atMillis).atZone(java.time.ZoneId.systemDefault()))
+        val n = NotificationCompat.Builder(context, CH_INFO)
+            .setSmallIcon(R.drawable.ic_stat_alarm)
+            .setContentTitle("Snoozed")
+            .setContentText("${alarm.label.ifBlank { "Alarm" }} will ring again at $time.")
+            .setAutoCancel(true)
+            .build()
+        try {
+            NotificationManagerCompat.from(context).notify(30_000 + alarm.id, n)
+        } catch (_: SecurityException) {
+        }
+    }
+
+    fun clearSnoozed(context: Context, alarmId: Int) {
+        NotificationManagerCompat.from(context).cancel(30_000 + alarmId)
+    }
+
     fun showMissed(context: Context, alarm: Alarm) {
         ensureChannels(context)
         val time = DateTimeFormatter.ofLocalizedTime(FormatStyle.SHORT)

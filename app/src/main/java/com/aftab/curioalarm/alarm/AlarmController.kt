@@ -12,17 +12,30 @@ class AlarmController(
 ) {
 
     @Synchronized
-    fun save(alarm: Alarm): Alarm = applySchedule(repo.upsert(alarm))
+    fun save(alarm: Alarm): Alarm {
+        val stored = applySchedule(repo.upsert(alarm))
+        if (!stored.enabled || stored.snoozeMinutes == 0 || stored.hardMode) {
+            SnoozeStore.clear(context, stored.id)
+            scheduler.cancelSnooze(stored.id)
+        }
+        return stored
+    }
 
     @Synchronized
     fun setEnabled(id: Int, enabled: Boolean) {
         val alarm = repo.get(id) ?: return
+        if (!enabled) {
+            SnoozeStore.clear(context, id)
+            scheduler.cancelSnooze(id)
+        }
         applySchedule(repo.upsert(alarm.copy(enabled = enabled)))
     }
 
     @Synchronized
     fun delete(id: Int) {
         repo.get(id)?.let { scheduler.cancel(it) }
+        SnoozeStore.clear(context, id)
+        scheduler.cancelSnooze(id)
         repo.delete(id)
     }
 

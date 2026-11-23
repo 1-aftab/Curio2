@@ -1,6 +1,7 @@
 package com.aftab.curioalarm.ui
 
 import android.text.format.DateFormat
+import android.widget.Toast
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
@@ -54,8 +55,10 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.aftab.curioalarm.Graph
+import com.aftab.curioalarm.alarm.SnoozeStore
 import com.aftab.curioalarm.data.Alarm
 import com.aftab.curioalarm.data.AlertMode
+import com.aftab.curioalarm.data.WakeStreakStore
 import java.time.LocalDateTime
 import java.time.format.DateTimeFormatter
 import java.util.Locale
@@ -68,6 +71,7 @@ fun HomeScreen(
     onFix: (PermissionKind) -> Unit,
     onEdit: (Alarm) -> Unit,
     onToggle: (Alarm, Boolean) -> Unit,
+    onQuick: (Int) -> Unit,
     onRestorePresets: () -> Unit,
     contentPadding: PaddingValues
 ) {
@@ -88,6 +92,7 @@ fun HomeScreen(
     ) {
         item { Greeting() }
         item { NextAlarmHero(alarms, is24) }
+        item { QuickAlarmRow(onQuick) }
         if (!perms.allGood) item { PermissionCard(perms, onFix) }
         if (alarms.isEmpty()) {
             item { EmptyState(onRestorePresets) }
@@ -154,6 +159,16 @@ private fun Greeting() {
         )
         Spacer(Modifier.height(4.dp))
         Text(dateFmt.format(now), color = Palette.Muted, fontSize = 13.sp, letterSpacing = 0.3.sp)
+        val streak = WakeStreakStore.current(LocalContext.current)
+        if (streak > 0) {
+            Spacer(Modifier.height(6.dp))
+            Text(
+                if (streak == 1) "1 morning solved" else "$streak mornings in a row",
+                color = Palette.AccentDim,
+                fontSize = 12.sp,
+                letterSpacing = 0.3.sp
+            )
+        }
     }
 }
 
@@ -165,10 +180,19 @@ private fun NextAlarmHero(alarms: List<Alarm>, is24: Boolean) {
             value = System.currentTimeMillis()
         }
     }
-    val next = remember(alarms, now) {
-        alarms.filter { it.enabled }
-            .map { it to Graph.scheduler.nextTrigger(it).toInstant().toEpochMilli() }
-            .minByOrNull { it.second }
+    val ctx = LocalContext.current
+    val snooze = SnoozeStore.soonest(ctx, now)
+    val next = remember(alarms, now, snooze) {
+        buildList {
+            alarms.filter { it.enabled }.forEach { alarm ->
+                add(Triple(alarm, Graph.scheduler.nextTrigger(alarm).toInstant().toEpochMilli(), false))
+            }
+            if (snooze != null) {
+                alarms.firstOrNull { it.id == snooze.alarmId }?.let { alarm ->
+                    add(Triple(alarm, snooze.atMillis, true))
+                }
+            }
+        }.minByOrNull { it.second }
     }
     val shape = RoundedCornerShape(20.dp)
     if (next == null) {
@@ -195,8 +219,13 @@ private fun NextAlarmHero(alarms: List<Alarm>, is24: Boolean) {
             }
         }
     } else {
-        val (alarm, at) = next
-        val (time, suffix) = Fmt.time(alarm.hour, alarm.minute, is24)
+        val (alarm, at, snoozed) = next
+        val (time, suffix) = if (snoozed) {
+            val z = java.time.Instant.ofEpochMilli(at).atZone(java.time.ZoneId.systemDefault())
+            Fmt.time(z.hour, z.minute, is24)
+        } else {
+            Fmt.time(alarm.hour, alarm.minute, is24)
+        }
         Surface(
             shape = shape,
             color = Palette.AccentSoft,
@@ -205,7 +234,7 @@ private fun NextAlarmHero(alarms: List<Alarm>, is24: Boolean) {
         ) {
             Column(Modifier.padding(22.dp)) {
                 Text(
-                    "NEXT ALARM",
+                    if (snoozed) "SNOOZED" else "NEXT ALARM",
                     color = Palette.AccentDim,
                     fontSize = 10.5.sp,
                     letterSpacing = 2.2.sp,
@@ -228,12 +257,44 @@ private fun NextAlarmHero(alarms: List<Alarm>, is24: Boolean) {
                         fontWeight = FontWeight.Medium
                     )
                     Text(
-                        "  ·  " + alarm.label.ifBlank { "Alarm" } + "  ·  " + Fmt.days(alarm.days),
+                        "  ·  " + alarm.label.ifBlank { "Alarm" } + "  ·  " + if (snoozed) "Snoozed" else Fmt.days(alarm.days),
                         color = Palette.Muted,
                         fontSize = 13.sp,
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis,
                         modifier = Modifier.weight(1f, fill = false)
+                    )
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun QuickAlarmRow(onQuick: (Int) -> Unit) {
+    val ctx = LocalContext.current
+    val is24 = remember { DateFormat.is24HourFormat(ctx) }
+    Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+        SectionLabel("Quick alarm")
+        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            listOf(15, 30, 60).forEach { minutes ->
+                Surface(
+                    shape = CircleShape,
+                    color = Palette.Surface,
+                    border = BorderStroke(1.dp, Palette.Outline2),
+                    modifier = Modifier.clickable {
+                        onQuick(minutes)
+                        val t = java.time.LocalTime.now().plusMinutes(minutes.toLong())
+                        val (time, suffix) = Fmt.time(t.hour, t.minute, is24)
+                        val shown = if (suffix.isEmpty()) time else "$time $suffix"
+                        Toast.makeText(ctx, "Set for $shown", Toast.LENGTH_SHORT).show()
+                    }
+                ) {
+                    Text(
+                        if (minutes == 60) "1 hour" else "$minutes min",
+                        color = Palette.Text,
+                        fontSize = 13.sp,
+                        modifier = Modifier.padding(horizontal = 14.dp, vertical = 8.dp)
                     )
                 }
             }
@@ -299,6 +360,9 @@ private fun AlarmCard(alarm: Alarm, is24: Boolean, onClick: () -> Unit, onToggle
                 horizontalArrangement = Arrangement.spacedBy(6.dp)
             ) {
                 MetaChip(Fmt.challengeShort(alarm))
+                if (alarm.snoozeMinutes > 0 && !alarm.hardMode) {
+                    MetaChip("Snooze ${alarm.snoozeMinutes}m")
+                }
                 MetaChip(
                     when (alarm.alertMode) {
                         AlertMode.VIBRATION -> "Vibration only"

@@ -53,6 +53,10 @@ data class Alarm(
     val difficulty: Difficulty = Difficulty.MEDIUM,
     val alertMode: AlertMode = AlertMode.SOUND_AND_VIBRATION,
     val gradualVolume: Boolean = true,
+    /** 0 = snooze off. Allowed lengths are 5, 9 and 15. Existing alarms stay off. */
+    val snoozeMinutes: Int = 0,
+    /** How many times one ringing can be snoozed. Ignored when [snoozeMinutes] is 0. */
+    val snoozeLimit: Int = 1,
     val scheduledAt: Long = 0L,
     val lastFiredAt: Long = 0L,
     val hardMode: Boolean = false

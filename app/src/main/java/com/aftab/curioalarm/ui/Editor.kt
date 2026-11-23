@@ -50,6 +50,7 @@ import androidx.compose.material3.rememberTimePickerState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
@@ -65,6 +66,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.aftab.curioalarm.Graph
+import com.aftab.curioalarm.alarm.SnoozeRules
 import com.aftab.curioalarm.data.Alarm
 import com.aftab.curioalarm.data.AlertMode
 import com.aftab.curioalarm.data.ChallengeType
@@ -100,6 +102,8 @@ fun AlarmEditor(
     var difficultyName by rememberSaveable { mutableStateOf(initial.difficulty.name) }
     var alertModeName by rememberSaveable { mutableStateOf(initial.alertMode.name) }
     var gradual by rememberSaveable { mutableStateOf(initial.gradualVolume) }
+    var snoozeMinutes by rememberSaveable { mutableIntStateOf(initial.snoozeMinutes) }
+    var snoozeLimit by rememberSaveable { mutableIntStateOf(initial.snoozeLimit) }
     var kiosk by rememberSaveable { mutableStateOf(initial.hardMode) }
     var soundPath by rememberSaveable { mutableStateOf(initial.soundPath) }
     var soundName by rememberSaveable { mutableStateOf(initial.soundName) }
@@ -149,6 +153,8 @@ fun AlarmEditor(
                 difficulty = difficulty,
                 alertMode = alertMode,
                 gradualVolume = gradual,
+                snoozeMinutes = if (kiosk) 0 else snoozeMinutes,
+                snoozeLimit = snoozeLimit,
                 hardMode = kiosk
             )
         )
@@ -442,6 +448,42 @@ fun AlarmEditor(
                             ) { Text(d.title, fontSize = 13.sp) }
                         }
                     }
+                }
+
+                // ---- snooze
+                Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                    SectionLabel("Snooze")
+                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        SnoozeRules.MINUTES.forEach { minutes ->
+                            FilterChip(
+                                selected = snoozeMinutes == minutes && !kiosk,
+                                onClick = { if (!kiosk) snoozeMinutes = minutes },
+                                enabled = !kiosk,
+                                label = { Text(SnoozeRules.label(minutes)) },
+                                colors = curioChipColors(),
+                                border = BorderStroke(1.dp, Palette.Outline2)
+                            )
+                        }
+                    }
+                    if (snoozeMinutes > 0 && !kiosk) {
+                        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                            SnoozeRules.LIMITS.forEach { limit ->
+                                FilterChip(
+                                    selected = snoozeLimit == limit,
+                                    onClick = { snoozeLimit = limit },
+                                    label = { Text(if (limit == 1) "Once" else "$limit times") },
+                                    colors = curioChipColors(),
+                                    border = BorderStroke(1.dp, Palette.Outline2)
+                                )
+                            }
+                        }
+                    }
+                    Text(
+                        if (kiosk) "Kiosk mode never snoozes. Turn it off to allow a limited snooze."
+                        else "After the last snooze, only the challenge stops the alarm.",
+                        color = Palette.Muted,
+                        fontSize = 12.sp
+                    )
                 }
 
                 // ---- kiosk mode
