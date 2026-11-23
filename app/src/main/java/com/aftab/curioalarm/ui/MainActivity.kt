@@ -259,6 +259,8 @@ private fun CurioRoot(
             WelcomeFlow(
                 mode = intro ?: IntroMode.FIRST_RUN,
                 perms = perms,
+                themeMode = themeMode,
+                onThemeChange = onThemeChange,
                 onRequestNotifications = {
                     if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
                         openSettingsOnDeny = true

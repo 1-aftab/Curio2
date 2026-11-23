@@ -2,6 +2,8 @@ package com.aftab.curioalarm
 
 import com.aftab.curioalarm.alarm.SnoozeRules
 import com.aftab.curioalarm.data.WakeStreak
+import com.aftab.curioalarm.ui.IntroMode
+import com.aftab.curioalarm.ui.OnboardingFlow
 import java.time.LocalDate
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
@@ -29,6 +31,27 @@ class WakeStreakTest {
     @Test
     fun aGapResets() {
         assertEquals(today to 1, WakeStreak.apply(today.minusDays(2), 9, today))
+    }
+}
+
+class OnboardingGateTest {
+    @Test
+    fun consentDoesNotMoveUntilAgreed() {
+        assertEquals("CONSENT", OnboardingFlow.next("CONSENT", IntroMode.FIRST_RUN, agreed = false))
+        assertEquals("CONSENT", OnboardingFlow.skipConsent(agreed = false))
+    }
+
+    @Test
+    fun agreedConsentOpensPermissionsOrTheTour() {
+        assertEquals("PERMISSIONS", OnboardingFlow.next("CONSENT", IntroMode.FIRST_RUN, agreed = true))
+        assertEquals("TOUR_ALARMS", OnboardingFlow.skipConsent(agreed = true))
+    }
+
+    @Test
+    fun onlyTheLastTourStepFinishesFirstRun() {
+        assertFalse(OnboardingFlow.finishes("TOUR_TOOLS", IntroMode.FIRST_RUN))
+        assertTrue(OnboardingFlow.finishes("TOUR_YOURS", IntroMode.FIRST_RUN))
+        assertTrue(OnboardingFlow.finishes("PERMISSIONS", IntroMode.PERMISSIONS))
     }
 }
 
