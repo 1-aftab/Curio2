@@ -46,6 +46,31 @@ class AlarmScheduler(private val context: Context) {
         return at
     }
 
+    /**
+     * A separate exact alarm, not [setAlarmClock]. setAlarmClock is one-per-app and would
+     * replace the next real alarm. Request code is offset so it cannot collide with [schedule].
+     */
+    fun scheduleSnooze(alarmId: Int, atMillis: Long) {
+        val operation = snoozePending(alarmId, atMillis)
+        try {
+            alarmManager.setExactAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, atMillis, operation)
+        } catch (_: SecurityException) {
+            alarmManager.setAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, atMillis, operation)
+        }
+    }
+
+    fun cancelSnooze(alarmId: Int) {
+        val existing = PendingIntent.getBroadcast(
+            context, snoozeRequest(alarmId),
+            Intent(context, AlarmReceiver::class.java).setAction(ACTION_SNOOZE),
+            PendingIntent.FLAG_NO_CREATE or PendingIntent.FLAG_IMMUTABLE
+        )
+        if (existing != null) {
+            alarmManager.cancel(existing)
+            existing.cancel()
+        }
+    }
+
     fun cancel(alarm: Alarm) {
         // FLAG_NO_CREATE: cancelling must never create a fresh PendingIntent nor overwrite
         // the trigger-time extras of one that is still scheduled.
@@ -71,9 +96,23 @@ class AlarmScheduler(private val context: Context) {
         )
     }
 
+    private fun snoozePending(alarmId: Int, atMillis: Long): PendingIntent {
+        val intent = Intent(context, AlarmReceiver::class.java)
+            .setAction(ACTION_SNOOZE)
+            .putExtra(EXTRA_ALARM_ID, alarmId)
+            .putExtra(EXTRA_TRIGGER_AT, atMillis)
+        return PendingIntent.getBroadcast(
+            context, snoozeRequest(alarmId), intent,
+            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+        )
+    }
+
     companion object {
         const val ACTION_FIRE = "com.aftab.curioalarm.ACTION_FIRE"
+        const val ACTION_SNOOZE = "com.aftab.curioalarm.ACTION_SNOOZE"
         const val EXTRA_ALARM_ID = "alarm_id"
         const val EXTRA_TRIGGER_AT = "trigger_at"
+
+        fun snoozeRequest(alarmId: Int): Int = 200_000 + alarmId
     }
 }

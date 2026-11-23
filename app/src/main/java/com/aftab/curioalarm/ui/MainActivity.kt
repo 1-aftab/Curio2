@@ -116,7 +116,9 @@ private fun CurioRoot(
         openSettingsOnDeny = false
     }
     LaunchedEffect(Unit) {
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU &&
+        // Only after the consent step. First launch asks from the setup screen, not here.
+        if (OnboardingPrefs.isDone(ctx) &&
+            Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU &&
             !perms.notifications &&
             !prefs.getBoolean("notif_asked", false)
         ) {
@@ -134,6 +136,10 @@ private fun CurioRoot(
                     .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP)
             )
         }
+    }
+
+    var intro by remember {
+        mutableStateOf(if (OnboardingPrefs.isDone(ctx)) null else IntroMode.FIRST_RUN)
     }
 
     // Selected section: 0 = Alarms, 1 = Stopwatch, 2 = Timer, 3 = Settings. Survives process death.
@@ -189,7 +195,7 @@ private fun CurioRoot(
                     ExtendedFloatingActionButton(
                         onClick = {
                             val t = LocalTime.now().plusHours(1)
-                            openEditor(Alarm(hour = t.hour, minute = 0))
+                            openEditor(Alarm(hour = t.hour, minute = 0, snoozeMinutes = 9, snoozeLimit = 1))
                         },
                         containerColor = Palette.Accent,
                         contentColor = Palette.OnAccent,
@@ -213,6 +219,7 @@ private fun CurioRoot(
                     },
                     onEdit = { openEditor(it) },
                     onToggle = { alarm, on -> vm.toggle(alarm, on) },
+                    onQuick = { vm.quick(it) },
                     onRestorePresets = { vm.restorePresets() },
                     contentPadding = inner
                 )
@@ -221,6 +228,8 @@ private fun CurioRoot(
                 else -> SettingsScreen(
                     themeMode = themeMode,
                     onThemeChange = onThemeChange,
+                    onShowTour = { intro = IntroMode.TOUR },
+                    onReviewPermissions = { intro = IntroMode.PERMISSIONS },
                     contentPadding = inner
                 )
             }
@@ -244,6 +253,30 @@ private fun CurioRoot(
                     )
                 }
             }
+        }
+
+        if (intro != null && ringingId == null && !editorVisible) {
+            WelcomeFlow(
+                mode = intro ?: IntroMode.FIRST_RUN,
+                perms = perms,
+                onRequestNotifications = {
+                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                        openSettingsOnDeny = true
+                        prefs.edit().putBoolean("notif_asked", true).apply()
+                        notificationLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
+                    } else {
+                        Permissions.open(ctx, PermissionKind.NOTIFICATIONS)
+                    }
+                },
+                onOpenPermission = { Permissions.open(ctx, it) },
+                onFinished = {
+                    if (intro == IntroMode.FIRST_RUN) {
+                        OnboardingPrefs.acceptConsent(ctx)
+                        OnboardingPrefs.markDone(ctx)
+                    }
+                    intro = null
+                }
+            )
         }
     }
 }

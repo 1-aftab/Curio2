@@ -54,6 +54,8 @@ import androidx.compose.ui.unit.sp
 import com.aftab.curioalarm.Graph
 import com.aftab.curioalarm.alarm.AlarmService
 import com.aftab.curioalarm.alarm.RingSession
+import com.aftab.curioalarm.alarm.SnoozeRules
+import com.aftab.curioalarm.alarm.SnoozeStore
 import com.aftab.curioalarm.challenge.ChallengeEngine
 import com.aftab.curioalarm.challenge.Puzzle
 import com.aftab.curioalarm.data.Alarm
@@ -294,6 +296,25 @@ private fun RingScreen(alarm: Alarm?, onSolved: () -> Unit) {
                             is Puzzle.Memory -> MemoryChallenge(puzzle, onSolved, onWrong = { round++ })
                         }
                     }
+                }
+            }
+            if (!isTimer && alarm != null) {
+                val used = SnoozeStore.used(ctx, alarm.id, alarm.lastFiredAt)
+                val allowed = SnoozeRules.canSnooze(alarm.snoozeMinutes, alarm.snoozeLimit, used, alarm.hardMode)
+                Spacer(Modifier.height(16.dp))
+                if (allowed) {
+                    GhostButton(
+                        "Snooze ${alarm.snoozeMinutes} min",
+                        onClick = { AlarmService.snooze(ctx) },
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                    Spacer(Modifier.height(8.dp))
+                    Text(
+                        if (SnoozeRules.left(alarm.snoozeLimit, used) == 1) "Last snooze. After that, only the challenge stops it."
+                        else "${SnoozeRules.left(alarm.snoozeLimit, used)} snoozes left.",
+                        color = Palette.Muted,
+                        fontSize = 12.sp
+                    )
                 }
             }
             Spacer(Modifier.height(16.dp))

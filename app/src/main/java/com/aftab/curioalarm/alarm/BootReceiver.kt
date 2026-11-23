@@ -15,6 +15,14 @@ class BootReceiver : BroadcastReceiver() {
             Intent.ACTION_TIMEZONE_CHANGED -> {
                 Graph.controller.restoreAll()
                 Graph.timer.restore()
+                SnoozeStore.allPending(context).forEach { pending ->
+                    if (pending.atMillis <= System.currentTimeMillis()) {
+                        SnoozeStore.clearPending(context, pending.alarmId)
+                        runCatching { AlarmService.start(context, pending.alarmId) }
+                    } else {
+                        Graph.scheduler.scheduleSnooze(pending.alarmId, pending.atMillis)
+                    }
+                }
                 // A reboot is not a dismiss. If a challenge was still owed, ring again.
                 RingSession.currentId(context)?.let { id ->
                     runCatching { AlarmService.start(context, id) }

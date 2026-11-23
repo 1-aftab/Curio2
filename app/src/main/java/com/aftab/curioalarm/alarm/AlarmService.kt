@@ -29,6 +29,7 @@ import androidx.core.content.ContextCompat
 import com.aftab.curioalarm.Graph
 import com.aftab.curioalarm.R
 import com.aftab.curioalarm.data.Alarm
+import com.aftab.curioalarm.data.WakeStreakStore
 import com.aftab.curioalarm.tools.TimerController
 import com.aftab.curioalarm.ui.AlarmActivity
 import java.io.File
@@ -109,6 +110,10 @@ class AlarmService : Service() {
             ACTION_DISMISS -> {
                 dismissCurrent()
                 return START_NOT_STICKY
+            }
+            ACTION_SNOOZE_NOW -> {
+                snoozeCurrent()
+                return if (currentAlarmId >= 0) START_REDELIVER_INTENT else START_NOT_STICKY
             }
             ACTION_NUDGE -> {
                 ensureAliveFromSession()
@@ -193,16 +198,56 @@ class AlarmService : Service() {
         _ringing.value = alarm.id
         RingSession.mark(this, alarm.id)
         acquireWakeLock()
+        Notifier.clearSnoozed(this, alarm.id)
         if (alarm.alertMode.playsSound) startSound(alarm)
         if (alarm.alertMode.vibrates) startVibration(alarm)
         startPlaybackWatch()
         if (alarm.hardMode) showAlarmScreen(alarm.id)
     }
 
+    /**
+     * Limited snooze. Does not solve the challenge and does not count as a wake.
+     * The power-button watchdog is cleared so it cannot immediately revive the ring.
+     */
+    private fun snoozeCurrent() {
+        val id = currentAlarmId
+        val alarm = if (id > 0) resolve(id) else null
+        if (alarm == null) return
+        val used = SnoozeStore.used(this, id, alarm.lastFiredAt)
+        if (!SnoozeRules.canSnooze(alarm.snoozeMinutes, alarm.snoozeLimit, used, alarm.hardMode)) return
+        SnoozeStore.noteUsed(this, id, alarm.lastFiredAt)
+        val at = System.currentTimeMillis() + alarm.snoozeMinutes * 60_000L
+        SnoozeStore.setPending(this, id, at)
+        Graph.scheduler.scheduleSnooze(id, at)
+        Notifier.showSnoozed(this, alarm, at)
+        stopPlayback()
+        while (queue.isNotEmpty()) {
+            val next = resolve(queue.removeFirst())
+            if (next != null) {
+                postForeground(next, next.id)
+                beginRinging(next)
+                return
+            }
+        }
+        RingSession.clear(this)
+        currentAlarmId = -1
+        _ringing.value = null
+        cancelCompanion()
+        ServiceCompat.stopForeground(this, ServiceCompat.STOP_FOREGROUND_REMOVE)
+        stopSelf()
+    }
+
     /** Solves the current alarm; rings the next queued one, or stops when the queue is empty. */
     private fun dismissCurrent() {
+        val solvedId = currentAlarmId
         stopPlayback()
-        if (currentAlarmId == TimerController.TIMER_ID) Graph.timer.onRingDismissed()
+        if (solvedId == TimerController.TIMER_ID) {
+            Graph.timer.onRingDismissed()
+        } else if (solvedId > 0) {
+            WakeStreakStore.recordToday(this)
+            SnoozeStore.clear(this, solvedId)
+            Graph.scheduler.cancelSnooze(solvedId)
+        }
         while (queue.isNotEmpty()) {
             val next = resolve(queue.removeFirst())
             if (next != null) {
@@ -560,6 +605,7 @@ class AlarmService : Service() {
         const val ACTION_DISMISS = "com.aftab.curioalarm.DISMISS"
         const val ACTION_REPOST = "com.aftab.curioalarm.REPOST"
         const val ACTION_NUDGE = "com.aftab.curioalarm.NUDGE"
+        const val ACTION_SNOOZE_NOW = "com.aftab.curioalarm.SNOOZE_NOW"
         const val EXTRA_ALARM_ID = "alarm_id"
         private const val NOTIF_ID = 4242
         private const val NOTIF_FSI = 4243
@@ -581,6 +627,14 @@ class AlarmService : Service() {
             runCatching {
                 context.startService(
                     Intent(context, AlarmService::class.java).setAction(ACTION_NUDGE)
+                )
+            }
+        }
+
+        fun snooze(context: Context) {
+            runCatching {
+                context.startService(
+                    Intent(context, AlarmService::class.java).setAction(ACTION_SNOOZE_NOW)
                 )
             }
         }
