@@ -3,81 +3,53 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Curio Alarm — try to turn it off</title>
-  <meta name="description" content="Curio Alarm is a black-and-white Android clock that keeps ringing until you solve a challenge. Download the APK.">
+  <title>Curio Alarm</title>
+  <meta name="description" content="Curio Alarm is a black-and-white Android clock that keeps ringing until you solve a challenge. Download for Android.">
   <meta name="theme-color" content="#FFFFFF">
   <link rel="icon" href="favicon.svg" type="image/svg+xml">
-  <!--
-    Download button: downloads/CurioAlarm.apk
-    On disk: docs/downloads/CurioAlarm.apk
-    Keep that filename. Replacing the file is enough. Do not edit the button.
-  -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <script>
+    (function () {
+      var saved = null;
+      try { saved = localStorage.getItem("curio-theme"); } catch (e) {}
+      var dark = saved ? saved === "dark" : window.matchMedia("(prefers-color-scheme: dark)").matches;
+      document.documentElement.setAttribute("data-theme", dark ? "dark" : "light");
+    })();
+  </script>
   <style>
     :root {
       --bg: #ffffff;
       --surface: #ffffff;
-      --surface-high: #f4f4f5;
-      --outline: #e4e4e7;
-      --outline-2: #d4d4d8;
+      --high: #f4f4f5;
+      --line: #e4e4e7;
+      --line-2: #d4d4d8;
       --text: #18181b;
       --muted: #71717a;
+      --dim: #52525b;
       --accent: #18181b;
-      --on-accent: #ffffff;
-      --accent-dim: #52525b;
+      --on: #ffffff;
       --danger: #b42318;
-      --bezel: #18181b;
-      --key: #a1a1aa;
+      --stage: #09090b;
+      --frame: #e4e4e7;
       color-scheme: light;
-    }
-    @media (prefers-color-scheme: dark) {
-      :root:not([data-theme]) {
-        --bg: #09090b;
-        --surface: #121214;
-        --surface-high: #1c1c1f;
-        --outline: #232327;
-        --outline-2: #35353a;
-        --text: #fafafa;
-        --muted: #a1a1aa;
-        --accent: #fafafa;
-        --on-accent: #18181b;
-        --accent-dim: #d4d4d8;
-        --danger: #f97066;
-        --bezel: #fafafa;
-        --key: #3f3f46;
-        color-scheme: dark;
-      }
     }
     [data-theme="dark"] {
       --bg: #09090b;
       --surface: #121214;
-      --surface-high: #1c1c1f;
-      --outline: #232327;
-      --outline-2: #35353a;
+      --high: #1c1c1f;
+      --line: #232327;
+      --line-2: #35353a;
       --text: #fafafa;
       --muted: #a1a1aa;
+      --dim: #d4d4d8;
       --accent: #fafafa;
-      --on-accent: #18181b;
-      --accent-dim: #d4d4d8;
+      --on: #18181b;
       --danger: #f97066;
-      --bezel: #fafafa;
-      --key: #3f3f46;
+      --stage: #f4f4f5;
+      --frame: #18181b;
       color-scheme: dark;
-    }
-    [data-theme="light"] {
-      --bg: #ffffff;
-      --surface: #ffffff;
-      --surface-high: #f4f4f5;
-      --outline: #e4e4e7;
-      --outline-2: #d4d4d8;
-      --text: #18181b;
-      --muted: #71717a;
-      --accent: #18181b;
-      --on-accent: #ffffff;
-      --accent-dim: #52525b;
-      --danger: #b42318;
-      --bezel: #18181b;
-      --key: #a1a1aa;
-      color-scheme: light;
     }
 
     * { box-sizing: border-box; }
@@ -86,233 +58,210 @@
       margin: 0;
       background: var(--bg);
       color: var(--text);
-      font-family: "Segoe UI", "Helvetica Neue", system-ui, sans-serif;
+      font-family: Manrope, "Segoe UI", system-ui, sans-serif;
       font-size: 16px;
       line-height: 1.5;
       -webkit-font-smoothing: antialiased;
+      overflow-x: hidden;
     }
     ::selection { background: var(--text); color: var(--bg); }
     :focus-visible { outline: 2px solid var(--text); outline-offset: 3px; }
     a { color: inherit; }
     button, input { font: inherit; color: inherit; }
     p { margin: 0; }
+    h1, h2, h3 { letter-spacing: -0.045em; }
 
-    .wrap {
-      width: min(1080px, calc(100% - 40px));
-      margin: 0 auto;
-    }
-    .rule { border: 0; border-top: 1px solid var(--outline); margin: 0; }
+    .wrap { width: min(1120px, calc(100% - 40px)); margin: 0 auto; }
 
     .header {
       position: sticky;
       top: 0;
-      z-index: 20;
-      background: var(--bg);
-      border-top: 3px solid var(--text);
-      border-bottom: 1px solid var(--outline);
+      z-index: 30;
+      background: color-mix(in srgb, var(--bg) 88%, transparent);
+      backdrop-filter: blur(16px);
+      border-bottom: 1px solid var(--line);
     }
     .header-inner {
-      height: 64px;
+      height: 68px;
       display: flex;
       align-items: center;
-      gap: 16px;
+      gap: 22px;
     }
-    .brand {
-      display: flex;
-      align-items: baseline;
-      gap: 8px;
+    .logo {
       text-decoration: none;
-    }
-    .brand strong {
+      font-weight: 800;
       font-size: 18px;
-      font-weight: 650;
-      letter-spacing: -0.04em;
+      letter-spacing: -0.05em;
     }
-    .brand span {
+    nav { display: flex; gap: 18px; }
+    nav a {
+      text-decoration: none;
       color: var(--muted);
-      font-size: 13px;
+      font-size: 14px;
+      font-weight: 600;
     }
-    .header-actions {
-      margin-left: auto;
-      display: flex;
-      align-items: center;
-      gap: 8px;
-    }
-    .btn, .ghost, .textish {
+    nav a:hover { color: var(--text); }
+    .header-actions { margin-left: auto; display: flex; align-items: center; gap: 8px; }
+
+    .btn, .ghost {
       display: inline-flex;
       align-items: center;
       justify-content: center;
-      height: 40px;
+      height: 42px;
       padding: 0 16px;
-      border-radius: 10px;
+      border-radius: 999px;
       text-decoration: none;
       border: 1px solid transparent;
       cursor: pointer;
       background: transparent;
       font-size: 14px;
-      font-weight: 600;
-      letter-spacing: -0.01em;
+      font-weight: 700;
+      letter-spacing: -0.02em;
+      transition: transform 0.18s ease, background 0.18s ease, border-color 0.18s ease;
     }
-    .btn {
-      background: var(--accent);
-      color: var(--on-accent);
-    }
-    .btn:hover { background: var(--accent-dim); color: #fff; }
-    [data-theme="dark"] .btn:hover { color: #18181b; background: var(--accent-dim); }
-    .ghost {
-      border-color: var(--outline-2);
-      color: var(--text);
-      background: var(--bg);
-    }
+    .btn { background: var(--accent); color: var(--on); }
+    .btn:hover { transform: translateY(-1px); }
+    .btn.lg { height: 52px; padding: 0 22px; font-size: 15px; }
+    .ghost { border-color: var(--line-2); color: var(--text); background: transparent; }
     .ghost:hover { border-color: var(--text); }
-    .textish {
-      padding: 0 10px;
-      color: var(--muted);
-      font-weight: 500;
+    .theme {
+      height: 42px;
+      padding: 0 14px;
+      border-radius: 999px;
+      border: 1px solid var(--line-2);
+      background: var(--high);
+      cursor: pointer;
+      font-size: 13px;
+      font-weight: 700;
     }
-    .textish:hover { color: var(--text); }
 
     .hero {
       display: grid;
-      grid-template-columns: minmax(0, 1.05fr) minmax(280px, 0.95fr);
-      gap: 48px;
+      grid-template-columns: 1.05fr 0.95fr;
+      gap: 36px;
       align-items: center;
-      padding: 72px 0 80px;
+      padding: 56px 0 28px;
     }
-    .kicker {
-      margin: 0 0 16px;
-      color: var(--accent-dim);
-      font-size: 11px;
-      font-weight: 650;
-      letter-spacing: 0.18em;
+    .live {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      margin-bottom: 18px;
+      color: var(--dim);
+      font-size: 12px;
+      font-weight: 700;
+      letter-spacing: 0.14em;
+      text-transform: uppercase;
+    }
+    .live i {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: var(--text);
+      display: block;
     }
     h1 {
       margin: 0;
-      font-size: clamp(46px, 6.5vw, 78px);
-      font-weight: 600;
-      letter-spacing: -0.048em;
-      line-height: 0.92;
+      font-size: clamp(52px, 7vw, 88px);
+      font-weight: 800;
+      line-height: 0.9;
     }
+    h1 span { color: var(--muted); font-weight: 500; }
     .lead {
+      max-width: 34rem;
       margin-top: 22px;
-      max-width: 38rem;
       color: var(--muted);
-      font-size: 17px;
+      font-size: 18px;
       line-height: 1.55;
     }
-    .cta {
-      display: flex;
-      flex-wrap: wrap;
-      align-items: center;
-      gap: 10px 14px;
-      margin-top: 28px;
-    }
-    .cta .btn { height: 46px; padding: 0 18px; }
-    .filemeta {
-      color: var(--muted);
-      font-size: 13px;
-    }
-    .filemeta strong { color: var(--text); font-weight: 600; }
-    .sections-line {
-      margin-top: 28px;
-      color: var(--muted);
-      font-size: 13px;
-      letter-spacing: 0.04em;
-    }
+    .cta { display: flex; flex-wrap: wrap; align-items: center; gap: 12px; margin-top: 28px; }
+    .meta { margin-top: 16px; color: var(--muted); font-size: 13px; font-weight: 600; }
+    .unavailable { display: none; margin-top: 12px; color: var(--danger); font-size: 14px; }
+    .unavailable.show { display: block; }
 
-    .phone-wrap {
+    .showcase {
+      background: var(--stage);
+      border-radius: 32px;
+      min-height: 640px;
       display: flex;
       flex-direction: column;
       align-items: center;
-      padding: 8px 0 0;
-    }
-    .device {
+      justify-content: center;
+      padding: 36px 20px 28px;
       position: relative;
-      width: min(300px, 100%);
+      overflow: hidden;
+    }
+    .showcase::before {
+      content: "";
+      position: absolute;
+      width: 420px;
+      height: 420px;
+      border: 1px solid color-mix(in srgb, var(--frame) 55%, transparent);
+      border-radius: 50%;
+      animation: spin 28s linear infinite;
+    }
+    .showcase::after {
+      content: "";
+      position: absolute;
+      width: 280px;
+      height: 280px;
+      border: 1px solid color-mix(in srgb, var(--frame) 80%, transparent);
+      border-radius: 50%;
+    }
+    .phone-wrap { position: relative; z-index: 1; display: flex; flex-direction: column; align-items: center; }
+    .device {
+      width: 280px;
       padding: 8px;
-      border-radius: 40px;
-      background: var(--bezel);
+      border-radius: 36px;
+      background: var(--frame);
+      box-shadow: 0 28px 70px rgba(0, 0, 0, 0.28);
+      position: relative;
     }
     .side-key {
       position: absolute;
-      right: 0;
-      top: 118px;
-      width: 28px;
-      height: 72px;
-      padding: 0;
+      right: -3px;
+      top: 112px;
+      width: 8px;
+      height: 54px;
       border: 0;
-      background: transparent;
+      border-radius: 4px;
+      background: color-mix(in srgb, var(--frame) 55%, #000);
       cursor: pointer;
     }
-    .side-key::before {
-      content: "";
-      position: absolute;
-      right: 2px;
-      top: 10px;
-      width: 5px;
-      height: 56px;
-      border-radius: 3px;
-      background: var(--key);
-    }
-    .side-key:hover::before { background: var(--muted); }
     .screen {
-      position: relative;
-      min-height: 548px;
-      border-radius: 32px;
       background: var(--bg);
       color: var(--text);
+      border-radius: 28px;
+      min-height: 520px;
       overflow: hidden;
+      position: relative;
     }
     .screen.is-off { background: #000; }
     .screen.is-off .stage { visibility: hidden; }
-    .stage {
-      min-height: 548px;
-      display: flex;
-      flex-direction: column;
-      padding: 22px 16px 16px;
+    .island {
+      width: 78px;
+      height: 18px;
+      margin: 10px auto 0;
+      border-radius: 20px;
+      background: var(--frame);
     }
-    .clock-wrap {
-      position: relative;
-      height: 148px;
-      display: grid;
-      place-items: center;
-    }
-    .ring {
-      position: absolute;
-      border: 1px solid var(--outline-2);
-      border-radius: 50%;
-    }
-    .ring.a { width: 112px; height: 112px; }
-    .ring.b { width: 146px; height: 146px; }
-    .time {
-      font-size: 34px;
-      font-weight: 300;
-      letter-spacing: -0.03em;
-      text-align: center;
-    }
-    .alarm-name {
-      text-align: center;
-      color: var(--accent-dim);
-      font-size: 13px;
-    }
-    .chips {
-      display: flex;
-      justify-content: center;
-      gap: 6px;
-      margin: 8px 0 14px;
-    }
+    .stage { min-height: 492px; display: flex; flex-direction: column; padding: 8px 16px 16px; }
+    .clock-wrap { height: 132px; display: grid; place-items: center; position: relative; }
+    .time { font-size: 40px; font-weight: 300; letter-spacing: -0.04em; }
+    .alarm-name { text-align: center; color: var(--dim); font-size: 13px; font-weight: 600; }
+    .chips { display: flex; justify-content: center; gap: 6px; margin-bottom: 12px; }
     .chip {
-      border: 1px solid var(--outline);
-      background: var(--surface-high);
       border-radius: 999px;
-      padding: 4px 8px;
-      font-size: 11px;
+      background: var(--high);
       color: var(--muted);
+      font-size: 11px;
+      font-weight: 700;
+      padding: 4px 8px;
     }
     .card {
-      border: 1px solid var(--outline);
+      border: 1px solid var(--line);
       border-radius: 18px;
-      padding: 18px 14px 14px;
+      padding: 16px 14px 14px;
       background: var(--surface);
     }
     .card.wrong { border-color: var(--danger); }
@@ -320,86 +269,52 @@
       text-align: center;
       color: var(--muted);
       font-size: 10px;
-      font-weight: 650;
-      letter-spacing: 0.14em;
+      font-weight: 800;
+      letter-spacing: 0.16em;
     }
     .question {
-      margin: 8px 0 12px;
+      margin: 6px 0 12px;
       text-align: center;
-      font-size: 32px;
-      font-weight: 550;
-      letter-spacing: -0.04em;
+      font-size: 34px;
+      font-weight: 700;
+      letter-spacing: -0.05em;
     }
     .answer {
       width: 100%;
-      height: 42px;
-      border: 1px solid var(--outline-2);
-      border-radius: 10px;
+      height: 44px;
+      border-radius: 12px;
+      border: 1px solid var(--line-2);
       background: var(--bg);
       text-align: center;
       font-size: 16px;
+      font-weight: 600;
     }
-    .answer::placeholder { color: var(--muted); }
-    .check {
-      width: 100%;
-      margin-top: 8px;
-      height: 40px;
-    }
-    .hint {
-      min-height: 18px;
-      margin: 8px 0 0;
-      text-align: center;
-      font-size: 12px;
-      color: var(--muted);
-    }
+    .answer::placeholder { color: var(--muted); font-weight: 500; }
+    .check { width: 100%; margin-top: 8px; height: 42px; }
+    .hint { min-height: 18px; margin-top: 8px; text-align: center; font-size: 12px; font-weight: 600; color: var(--muted); }
     .hint.bad { color: var(--danger); }
     .fine {
       margin-top: auto;
-      padding-top: 16px;
+      padding-top: 14px;
       text-align: center;
       color: var(--muted);
       font-size: 11px;
       line-height: 1.45;
     }
-    .home-kicker {
-      color: var(--accent-dim);
-      font-size: 11px;
-      font-weight: 650;
-      letter-spacing: 0.22em;
-    }
-    .greet {
-      margin-top: 8px;
-      font-size: 28px;
-      font-weight: 600;
-      letter-spacing: -0.04em;
-      line-height: 1.1;
-    }
-    .date {
-      margin-top: 4px;
-      color: var(--muted);
-      font-size: 12px;
-    }
-    .streak {
-      margin-top: 6px;
-      color: var(--accent-dim);
-      font-size: 12px;
-    }
+    .home-kicker { color: var(--dim); font-size: 11px; font-weight: 800; letter-spacing: 0.22em; }
+    .greet { margin-top: 8px; font-size: 28px; font-weight: 800; letter-spacing: -0.045em; line-height: 1.05; }
+    .date, .streak { margin-top: 4px; color: var(--muted); font-size: 12px; font-weight: 600; }
+    .streak { color: var(--dim); }
     .alarm-row {
-      margin-top: 22px;
-      border: 1px solid var(--outline);
+      margin-top: 20px;
+      border: 1px solid var(--line);
       border-radius: 16px;
       padding: 14px;
       display: flex;
       align-items: center;
-      gap: 10px;
     }
-    .alarm-row .t {
-      font-size: 26px;
-      font-weight: 600;
-      letter-spacing: -0.04em;
-      line-height: 1;
-    }
-    .alarm-row .sub { color: var(--muted); font-size: 12px; margin-top: 3px; }
+    .alarm-row .t { font-size: 26px; font-weight: 800; letter-spacing: -0.04em; line-height: 1; }
+    .alarm-row .sub { color: var(--muted); font-size: 12px; margin-top: 3px; font-weight: 600; }
     .switch {
       margin-left: auto;
       width: 42px;
@@ -407,158 +322,150 @@
       border-radius: 13px;
       background: var(--accent);
       position: relative;
-      flex: none;
     }
     .switch i {
       position: absolute;
       width: 20px;
       height: 20px;
       border-radius: 50%;
-      background: var(--on-accent);
+      background: var(--on);
       top: 3px;
       right: 3px;
     }
-    .quick-label {
-      margin: 18px 0 8px;
-      color: var(--muted);
-      font-size: 10px;
-      font-weight: 650;
-      letter-spacing: 0.14em;
-    }
+    .quick-label { margin: 16px 0 8px; color: var(--muted); font-size: 10px; font-weight: 800; letter-spacing: 0.14em; }
     .pills { display: flex; gap: 6px; }
     .pill {
-      border: 1px solid var(--outline-2);
+      border: 1px solid var(--line-2);
       background: var(--surface);
       border-radius: 999px;
       padding: 7px 10px;
       font-size: 12px;
+      font-weight: 700;
       cursor: pointer;
     }
-    .pill:hover, .pill.on { border-color: var(--text); }
+    .pill.on, .pill:hover { border-color: var(--text); }
     .tabs {
       margin-top: auto;
       display: grid;
       grid-template-columns: repeat(4, 1fr);
-      padding-top: 18px;
+      padding-top: 16px;
       font-size: 10px;
+      font-weight: 700;
       text-align: center;
       color: var(--muted);
     }
-    .tabs .on { color: var(--text); font-weight: 650; }
-
+    .tabs .on { color: var(--text); }
     .status {
+      position: relative;
+      z-index: 1;
       margin: 16px 0 0;
-      min-height: 22px;
+      min-height: 20px;
+      color: color-mix(in srgb, var(--stage) 20%, #fff);
+      font-size: 13px;
+      font-weight: 600;
       text-align: center;
-      font-size: 13px;
-      color: var(--muted);
     }
-    .status.bad { color: var(--danger); }
-    .demo-actions {
+    [data-theme="dark"] .status { color: #3f3f46; }
+    .status.bad { color: #f97066; }
+    .demo-actions { position: relative; z-index: 1; display: flex; gap: 8px; margin-top: 12px; }
+    .demo-actions .ghost {
+      color: #fafafa;
+      border-color: rgba(255,255,255,0.28);
+      background: transparent;
+    }
+    [data-theme="dark"] .demo-actions .ghost { color: #18181b; border-color: rgba(0,0,0,0.2); }
+
+    .marquee {
+      border-top: 1px solid var(--line);
+      border-bottom: 1px solid var(--line);
+      overflow: hidden;
+      padding: 14px 0;
+      margin-top: 18px;
+    }
+    .marquee-track {
       display: flex;
-      gap: 8px;
-      margin-top: 10px;
+      gap: 0;
+      width: max-content;
+      animation: ticker 32s linear infinite;
     }
-
-    section { padding: 64px 0; }
-    h2 {
-      margin: 0 0 28px;
-      font-size: 28px;
-      font-weight: 600;
-      letter-spacing: -0.04em;
-    }
-    .steps {
-      display: grid;
-      grid-template-columns: repeat(3, 1fr);
-      gap: 28px;
-    }
-    .step-no {
-      display: block;
-      margin-bottom: 12px;
-      color: var(--muted);
-      font-size: 13px;
-      letter-spacing: 0.12em;
-    }
-    .steps h3 {
-      margin: 0 0 8px;
-      font-size: 18px;
-      font-weight: 600;
-      letter-spacing: -0.03em;
-    }
-    .steps p { color: var(--muted); font-size: 15px; }
-
-    .spec { margin: 0; }
-    .spec div {
-      display: grid;
-      grid-template-columns: 168px 1fr;
-      gap: 20px;
-      padding: 16px 0;
-      border-top: 1px solid var(--outline);
-    }
-    .spec div:last-child { border-bottom: 1px solid var(--outline); }
-    .spec dt { font-weight: 600; font-size: 15px; }
-    .spec dd { margin: 0; color: var(--muted); font-size: 15px; }
-
-    .install {
-      display: grid;
-      grid-template-columns: 1.2fr 0.8fr;
-      gap: 36px;
-      align-items: start;
-    }
-    ol {
-      margin: 0;
-      padding-left: 18px;
-      color: var(--text);
-    }
-    ol li { margin: 0 0 12px; padding-left: 4px; }
-    ol li span { color: var(--muted); }
-    .note {
-      border: 1px solid var(--outline);
-      border-radius: 16px;
-      padding: 18px;
-      background: var(--surface);
-    }
-    .note h3 {
-      margin: 0 0 8px;
-      font-size: 15px;
-      font-weight: 600;
-    }
-    .note p { color: var(--muted); font-size: 14px; }
-    .note p + p { margin-top: 10px; }
-    code {
-      font-family: ui-monospace, "SFMono-Regular", Consolas, monospace;
-      font-size: 0.92em;
-      color: var(--text);
-    }
-    .hash {
-      margin-top: 14px;
-      word-break: break-all;
+    .marquee span {
+      padding: 0 22px;
       color: var(--muted);
       font-size: 12px;
+      font-weight: 800;
+      letter-spacing: 0.16em;
+      text-transform: uppercase;
+      white-space: nowrap;
     }
-    details {
-      margin-top: 28px;
-      border-top: 1px solid var(--outline);
-      padding-top: 16px;
-    }
-    summary {
-      cursor: pointer;
-      font-weight: 600;
-      font-size: 14px;
-    }
-    details p { margin-top: 10px; color: var(--muted); font-size: 14px; max-width: 42rem; }
-    .missing {
-      display: none;
-      margin-top: 12px;
-      color: var(--danger);
-      font-size: 14px;
-    }
-    .missing.show { display: block; }
+    .marquee span::before { content: "·"; margin-right: 22px; color: var(--text); }
 
-    footer {
-      border-top: 1px solid var(--outline);
-      padding: 28px 0 40px;
+    section { padding: 88px 0; }
+    .eyebrow {
+      color: var(--dim);
+      font-size: 12px;
+      font-weight: 800;
+      letter-spacing: 0.16em;
+      text-transform: uppercase;
+      margin-bottom: 12px;
     }
+    h2 { margin: 0 0 14px; font-size: clamp(32px, 4vw, 48px); font-weight: 800; line-height: 1.02; }
+    .sub { max-width: 36rem; color: var(--muted); font-size: 16px; }
+
+    .moments {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 18px;
+      margin-top: 36px;
+    }
+    .moment {
+      border: 1px solid var(--line);
+      border-radius: 22px;
+      padding: 22px;
+      background: var(--surface);
+      min-height: 220px;
+      transition: transform 0.22s ease, border-color 0.22s ease, background 0.22s ease, color 0.22s ease;
+    }
+    .moment:hover { transform: translateY(-4px); border-color: var(--text); background: var(--text); color: var(--bg); }
+    .moment:hover p { color: color-mix(in srgb, var(--bg) 72%, var(--text)); }
+    .moment .n { font-size: 12px; font-weight: 800; letter-spacing: 0.14em; color: var(--muted); }
+    .moment:hover .n { color: color-mix(in srgb, var(--bg) 70%, var(--text)); }
+    .moment h3 { margin: 28px 0 8px; font-size: 24px; font-weight: 800; }
+    .moment p { color: var(--muted); font-size: 14px; }
+
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 12px;
+      margin-top: 12px;
+    }
+    .card-f {
+      border-radius: 18px;
+      background: var(--high);
+      padding: 20px;
+      min-height: 148px;
+      transition: background 0.2s ease, color 0.2s ease, transform 0.2s ease;
+    }
+    .card-f:hover { background: var(--text); color: var(--bg); transform: translateY(-3px); }
+    .card-f:hover p { color: color-mix(in srgb, var(--bg) 70%, var(--text)); }
+    .card-f h3 { margin: 0 0 8px; font-size: 16px; font-weight: 800; }
+    .card-f p { color: var(--muted); font-size: 14px; }
+
+    .band {
+      background: var(--text);
+      color: var(--bg);
+    }
+    .band .eyebrow { color: color-mix(in srgb, var(--bg) 70%, var(--text)); }
+    .band .sub { color: color-mix(in srgb, var(--bg) 72%, var(--text)); }
+    .steps { display: grid; grid-template-columns: repeat(3, 1fr); gap: 22px; margin-top: 36px; }
+    .step .n { font-size: 13px; font-weight: 800; letter-spacing: 0.12em; opacity: 0.55; }
+    .step h3 { margin: 10px 0 8px; font-size: 22px; font-weight: 800; }
+    .step p { color: color-mix(in srgb, var(--bg) 74%, var(--text)); font-size: 15px; }
+    .install-row { display: flex; flex-wrap: wrap; align-items: center; gap: 16px; margin-top: 32px; }
+    .band .btn { background: var(--bg); color: var(--text); }
+    .fineprint { margin-top: 18px; max-width: 40rem; color: color-mix(in srgb, var(--bg) 62%, var(--text)); font-size: 13px; }
+    .hash { margin-top: 10px; font-family: ui-monospace, Consolas, monospace; font-size: 12px; word-break: break-all; opacity: 0.7; }
+
+    footer { padding: 28px 0 36px; }
     .footer-inner {
       display: flex;
       justify-content: space-between;
@@ -566,68 +473,75 @@
       flex-wrap: wrap;
       color: var(--muted);
       font-size: 13px;
+      font-weight: 600;
     }
-    .footer-inner a { color: var(--text); }
+    .footer-inner a { color: var(--text); text-decoration: none; }
+    .dock { display: none; }
 
-    .dock {
-      display: none;
-    }
+    .rise { animation: rise 0.7s ease both; }
+    .d1 { animation-delay: 0.06s; }
+    .d2 { animation-delay: 0.14s; }
+    .d3 { animation-delay: 0.22s; }
 
-    @media (max-width: 900px) {
-      .hero, .steps, .install, .spec div { grid-template-columns: 1fr; }
-      .hero { padding: 40px 0 48px; gap: 36px; }
-      .phone-wrap { padding-right: 0; }
-      section { padding: 48px 0; }
+    @keyframes rise {
+      from { opacity: 0; transform: translateY(14px); }
+      to { opacity: 1; transform: none; }
     }
-    @media (max-width: 640px) {
-      .wrap { width: min(1080px, calc(100% - 32px)); }
-      .brand span, .header .textish { display: none; }
-      .dock {
-        display: flex;
-        position: fixed;
-        left: 0;
-        right: 0;
-        bottom: 0;
-        z-index: 30;
-        gap: 10px;
-        padding: 12px 16px calc(12px + env(safe-area-inset-bottom));
-        background: var(--bg);
-        border-top: 1px solid var(--outline);
-      }
-      .dock .btn { flex: 1; }
-      body { padding-bottom: 76px; }
-    }
-    @media (prefers-reduced-motion: reduce) {
-      html { scroll-behavior: auto; }
-      .device.shake { animation: none !important; }
-    }
-    @media (prefers-reduced-motion: no-preference) {
-      .ring.b { animation: breathe 2.8s ease-in-out infinite; }
-      .device.shake { animation: shake 0.42s ease; }
-    }
-    @keyframes breathe {
-      0%, 100% { opacity: 0.35; }
-      50% { opacity: 1; }
+    @keyframes ticker { to { transform: translateX(-50%); } }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    @keyframes pulse {
+      0%, 100% { opacity: 1; transform: scale(1); }
+      50% { opacity: 0.35; transform: scale(0.8); }
     }
     @keyframes shake {
       0%, 100% { transform: translateX(0); }
-      20% { transform: translateX(-7px); }
-      40% { transform: translateX(7px); }
-      60% { transform: translateX(-4px); }
-      80% { transform: translateX(4px); }
+      20% { transform: translateX(-6px); }
+      40% { transform: translateX(6px); }
+      60% { transform: translateX(-3px); }
+      80% { transform: translateX(3px); }
+    }
+    @media (prefers-reduced-motion: no-preference) {
+      .live i { animation: pulse 1.6s ease-in-out infinite; }
+      .device.shake { animation: shake 0.4s ease; }
+    }
+    @media (prefers-reduced-motion: reduce) {
+      html { scroll-behavior: auto; }
+      .rise, .marquee-track, .showcase::before, .live i { animation: none; }
+    }
+    @media (max-width: 900px) {
+      .hero, .moments, .grid, .steps { grid-template-columns: 1fr; }
+      .hero { padding-top: 32px; }
+      .showcase { min-height: 0; }
+      section { padding: 64px 0; }
+      nav { display: none; }
+    }
+    @media (max-width: 640px) {
+      .wrap { width: min(1120px, calc(100% - 28px)); }
+      .dock {
+        display: flex;
+        position: fixed;
+        left: 0; right: 0; bottom: 0;
+        z-index: 40;
+        padding: 12px 14px calc(12px + env(safe-area-inset-bottom));
+        background: color-mix(in srgb, var(--bg) 92%, transparent);
+        backdrop-filter: blur(16px);
+        border-top: 1px solid var(--line);
+      }
+      .dock .btn { flex: 1; }
+      body { padding-bottom: 76px; }
     }
   </style>
 </head>
 <body>
   <header class="header">
     <div class="wrap header-inner">
-      <a class="brand" href="#top">
-        <strong>curio</strong>
-        <span>alarm</span>
-      </a>
+      <a class="logo" href="#top">curio</a>
+      <nav>
+        <a href="#product">Product</a>
+        <a href="#install">Install</a>
+      </nav>
       <div class="header-actions">
-        <button class="textish" type="button" id="theme" aria-pressed="false">Dark</button>
-        <a class="textish" href="#install">Install</a>
+        <button class="theme" type="button" id="theme">Dark</button>
         <a class="btn" href="downloads/CurioAlarm.apk" download="CurioAlarm.apk">Download</a>
       </div>
     </div>
@@ -636,189 +550,177 @@
   <main id="top">
     <div class="wrap hero">
       <div>
-        <p class="kicker">CURIO ALARM</p>
-        <h1>Try to<br>turn it off.</h1>
-        <p class="lead">A black-and-white Android alarm. It keeps ringing until you solve a short problem. The power button is not that solution. Try it on the phone — press power, then answer.</p>
-        <div class="cta">
-          <a class="btn" href="downloads/CurioAlarm.apk" download="CurioAlarm.apk">Download APK</a>
+        <p class="live rise"><i></i> <span data-clock>--:--</span> · still ringing</p>
+        <h1 class="rise d1">It will not<br><span>turn off.</span></h1>
+        <p class="lead rise d2">A black-and-white Android alarm that stays on until you solve a short challenge. Power, Home, and a swiped notification only bring it back.</p>
+        <div class="cta rise d3">
+          <a class="btn lg" href="downloads/CurioAlarm.apk" download="CurioAlarm.apk">Download for Android</a>
           <a class="ghost" href="#install">How to install</a>
         </div>
-        <p class="filemeta" style="margin-top:14px">
-          Version <strong>1.3</strong>
-          · <span data-size>Android package</span>
-          · Android 8.0 or newer
-          · Not the Play Store
-        </p>
-        <p class="sections-line">Alarms · Stopwatch · Timer · Settings</p>
-        <p class="missing" id="missing">The APK is not in <code>downloads/CurioAlarm.apk</code> yet. That is the only path the button uses.</p>
+        <p class="meta">Version 1.3<span data-size></span> · Android 8.0 or newer · No account</p>
+        <p class="unavailable" id="unavailable">Download is unavailable right now.</p>
       </div>
 
-      <div class="phone-wrap">
-        <div class="device" id="device">
-          <button class="side-key" type="button" id="power" aria-label="Power button"></button>
-          <div class="screen" id="screen">
-            <div class="stage" id="ringing">
-              <div class="clock-wrap">
-                <span class="ring b"></span>
-                <span class="ring a"></span>
-                <div>
-                  <div class="time" data-clock>--:--</div>
-                  <div class="alarm-name">Alarm</div>
+      <div class="showcase rise d2">
+        <div class="phone-wrap">
+          <div class="device" id="device">
+            <button class="side-key" type="button" id="power" aria-label="Power button"></button>
+            <div class="screen" id="screen">
+              <div class="island"></div>
+              <div class="stage" id="ringing">
+                <div class="clock-wrap">
+                  <div>
+                    <div class="time" data-clock>--:--</div>
+                    <div class="alarm-name">Alarm</div>
+                  </div>
                 </div>
-              </div>
-              <div class="chips">
-                <span class="chip">Math</span>
-                <span class="chip">Easy</span>
-                <span class="chip" id="attempt" hidden>Attempt 2</span>
-              </div>
-              <form class="card" id="challenge">
-                <div class="solve-label">SOLVE TO DISMISS</div>
-                <div class="question">8 + 6</div>
-                <input class="answer" id="answer" inputmode="numeric" autocomplete="off" placeholder="Your answer" aria-label="Your answer">
-                <button class="btn check" type="submit">Check</button>
-                <p class="hint" id="hint"></p>
-              </form>
-              <p class="fine">The alarm keeps ringing until the challenge is solved. The power button will not stop it.</p>
-            </div>
-            <div class="stage" id="awake" hidden>
-              <div class="home-kicker">CURIO</div>
-              <div class="greet" id="greet">Good morning</div>
-              <div class="date" id="date"></div>
-              <div class="streak">1 morning solved</div>
-              <div class="alarm-row">
-                <div>
-                  <div class="t">7:00</div>
-                  <div class="sub">Morning · on</div>
+                <div class="chips">
+                  <span class="chip">Math</span>
+                  <span class="chip">Easy</span>
+                  <span class="chip" id="attempt" hidden>Attempt 2</span>
                 </div>
-                <span class="switch" aria-hidden="true"><i></i></span>
+                <form class="card" id="challenge">
+                  <div class="solve-label">SOLVE TO DISMISS</div>
+                  <div class="question">8 + 6</div>
+                  <input class="answer" id="answer" inputmode="numeric" autocomplete="off" placeholder="Your answer" aria-label="Your answer">
+                  <button class="btn check" type="submit">Check</button>
+                  <p class="hint" id="hint"></p>
+                </form>
+                <p class="fine">The alarm keeps ringing until the challenge is solved. The power button will not stop it.</p>
               </div>
-              <div class="quick-label">QUICK ALARM</div>
-              <div class="pills">
-                <button class="pill" type="button" data-quick>15 min</button>
-                <button class="pill" type="button" data-quick>30 min</button>
-                <button class="pill" type="button" data-quick>1 hour</button>
-              </div>
-              <div class="tabs">
-                <span class="on">Alarms</span>
-                <span>Stopwatch</span>
-                <span>Timer</span>
-                <span>Settings</span>
+              <div class="stage" id="awake" hidden>
+                <div class="home-kicker">CURIO</div>
+                <div class="greet" id="greet">Good morning</div>
+                <div class="date" id="date"></div>
+                <div class="streak">1 morning solved</div>
+                <div class="alarm-row">
+                  <div>
+                    <div class="t">7:00</div>
+                    <div class="sub">Morning · on</div>
+                  </div>
+                  <span class="switch" aria-hidden="true"><i></i></span>
+                </div>
+                <div class="quick-label">QUICK ALARM</div>
+                <div class="pills">
+                  <button class="pill" type="button" data-quick>15 min</button>
+                  <button class="pill" type="button" data-quick>30 min</button>
+                  <button class="pill" type="button" data-quick>1 hour</button>
+                </div>
+                <div class="tabs">
+                  <span class="on">Alarms</span>
+                  <span>Stopwatch</span>
+                  <span>Timer</span>
+                  <span>Settings</span>
+                </div>
               </div>
             </div>
           </div>
-        </div>
-        <p class="status" id="status">Still ringing. Press power. It comes back.</p>
-        <div class="demo-actions">
-          <button class="ghost" type="button" id="power-text">Press power</button>
-          <button class="ghost" type="button" id="reset" hidden>Ring again</button>
+          <p class="status" id="status">Press power. It comes back.</p>
+          <div class="demo-actions">
+            <button class="ghost" type="button" id="power-text">Press power</button>
+            <button class="ghost" type="button" id="reset" hidden>Ring again</button>
+          </div>
         </div>
       </div>
     </div>
 
-    <hr class="rule">
+    <div class="marquee" aria-hidden="true">
+      <div class="marquee-track">
+        <span>Power does nothing</span>
+        <span>Solve to dismiss</span>
+        <span>Math, memory, phrase</span>
+        <span>Snooze runs out</span>
+        <span>No ads</span>
+        <span>No tracking</span>
+        <span>Sound or vibration</span>
+        <span>Power does nothing</span>
+        <span>Solve to dismiss</span>
+        <span>Math, memory, phrase</span>
+        <span>Snooze runs out</span>
+        <span>No ads</span>
+        <span>No tracking</span>
+        <span>Sound or vibration</span>
+      </div>
+    </div>
 
-    <section>
+    <section id="product">
       <div class="wrap">
-        <p class="kicker">HOW IT WORKS</p>
-        <h2>Three steps. One exit.</h2>
+        <p class="eyebrow">The product</p>
+        <h2>Built to be difficult to dismiss.</h2>
+        <p class="sub">Not a sleep score. A clock that refuses to be polite about the morning.</p>
+        <div class="moments">
+          <article class="moment">
+            <div class="n">01</div>
+            <h3>The side button fails.</h3>
+            <p>Power turns the screen off for a moment, at most. Home and a swiped notification do the same. The tone keeps going.</p>
+          </article>
+          <article class="moment">
+            <div class="n">02</div>
+            <h3>The challenge is the exit.</h3>
+            <p>Math, a memory sequence, or a phrase. Easy, medium, or hard. Turn on more than one and Curio picks at random.</p>
+          </article>
+          <article class="moment">
+            <div class="n">03</div>
+            <h3>Snooze is not a lifestyle.</h3>
+            <p>5, 9, or 15 minutes, up to three times. Kiosk mode never snoozes. After the last one, only the challenge stops it.</p>
+          </article>
+        </div>
+        <div class="grid">
+          <article class="card-f">
+            <h3>Quick alarms</h3>
+            <p>15 minutes, 30 minutes, or 1 hour from home. One-shot, with a single 9-minute snooze.</p>
+          </article>
+          <article class="card-f">
+            <h3>Wake streak</h3>
+            <p>Consecutive days you actually solved it. Snooze does not count. A timer does not count.</p>
+          </article>
+          <article class="card-f">
+            <h3>Your alert</h3>
+            <p>Sound and vibration, sound only, or vibration only. Import your own audio. Volume can fade in.</p>
+          </article>
+          <article class="card-f">
+            <h3>Timer</h3>
+            <p>Rings with the app closed or the phone locked. One tap stops it. Alarms do not get that mercy.</p>
+          </article>
+          <article class="card-f">
+            <h3>Stopwatch</h3>
+            <p>Laps, with the fastest and slowest marked. It keeps the right time if you leave.</p>
+          </article>
+          <article class="card-f">
+            <h3>Private by default</h3>
+            <p>No account, no ads, no tracking. Permissions are explained before they are asked, and they exist so it can ring.</p>
+          </article>
+        </div>
+      </div>
+    </section>
+
+    <section class="band" id="install">
+      <div class="wrap">
+        <p class="eyebrow">Install</p>
+        <h2>On your phone in a minute.</h2>
+        <p class="sub">Direct install. Not the Play Store. Android 8.0 or newer.</p>
         <div class="steps">
-          <article>
-            <span class="step-no">01</span>
-            <h3>Set it.</h3>
-            <p>A time, a repeat, a sound. Or a quick alarm from home: 15 minutes, 30 minutes, or an hour.</p>
+          <article class="step">
+            <div class="n">01</div>
+            <h3>Download</h3>
+            <p>Save Curio Alarm. Version 1.3<span data-size></span>. Send it to the phone if you downloaded it on a computer.</p>
           </article>
-          <article>
-            <span class="step-no">02</span>
-            <h3>It rings.</h3>
-            <p>Over the lock screen, even if the app is closed. Power, Home, and a swiped notification bring the challenge back. The tone keeps going.</p>
+          <article class="step">
+            <div class="n">02</div>
+            <h3>Open the file</h3>
+            <p>If Android blocks it, allow installs from your browser or Files. Play Protect may warn you. That is because it is not the store.</p>
           </article>
-          <article>
-            <span class="step-no">03</span>
-            <h3>Solve it.</h3>
-            <p>Math, a memory sequence, or a phrase. That is the dismiss button. A timer can be tapped away. An alarm cannot.</p>
+          <article class="step">
+            <div class="n">03</div>
+            <h3>Open Curio</h3>
+            <p>Read the consent screen first. The checkbox is required. Then allow exact alarms if you want the minute you set.</p>
           </article>
         </div>
-      </div>
-    </section>
-
-    <hr class="rule">
-
-    <section>
-      <div class="wrap">
-        <p class="kicker">THE APP</p>
-        <h2>What you actually get.</h2>
-        <dl class="spec">
-          <div>
-            <dt>Challenges</dt>
-            <dd>Arithmetic, sequence memory, or typing a phrase. Easy, medium, or hard. Turn on more than one and Curio picks at random each ring.</dd>
-          </div>
-          <div>
-            <dt>Power button</dt>
-            <dd>Turns the screen off for a moment, at most. It does not dismiss the alarm. Force-stop in system Settings is the one escape Android still allows.</dd>
-          </div>
-          <div>
-            <dt>Snooze</dt>
-            <dd>Off on alarms you already saved. New alarms can snooze 5, 9, or 15 minutes, up to three times. Kiosk mode never snoozes. After the last one, only the challenge stops it.</dd>
-          </div>
-          <div>
-            <dt>Quick alarms</dt>
-            <dd>15 minutes, 30 minutes, or 1 hour from the home screen. One-shot, with a single 9-minute snooze.</dd>
-          </div>
-          <div>
-            <dt>Wake streak</dt>
-            <dd>Consecutive days you solved the challenge. Snooze does not count. Dismissing a timer does not count.</dd>
-          </div>
-          <div>
-            <dt>Alert</dt>
-            <dd>Sound and vibration, sound only, or vibration only. Per alarm, and for the timer. Import your own audio. Volume can fade in.</dd>
-          </div>
-          <div>
-            <dt>Stopwatch</dt>
-            <dd>Laps, with fastest and slowest marked. Keeps the right time if you leave the app.</dd>
-          </div>
-          <div>
-            <dt>Timer</dt>
-            <dd>Presets or your own length. Rings with Curio closed or the phone locked. One tap stops it. No challenge.</dd>
-          </div>
-          <div>
-            <dt>Appearance</dt>
-            <dd>System, Light, or Dark. Black and white either way, including the ringing screen and the system bars.</dd>
-          </div>
-          <div>
-            <dt>Privacy</dt>
-            <dd>No account, no ads, no tracking. Notifications, exact alarms, full-screen alerts, and an optional battery exception are explained before they are asked. They exist so the alarm can ring.</dd>
-          </div>
-        </dl>
-      </div>
-    </section>
-
-    <hr class="rule">
-
-    <section id="install">
-      <div class="wrap">
-        <p class="kicker">INSTALL</p>
-        <h2>The file, then the phone.</h2>
-        <div class="install">
-          <ol>
-            <li><span>Press Download. The file is <code>CurioAlarm.apk</code>, version 1.3<span data-size></span>.</span></li>
-            <li><span>On a computer, send that file to the Android phone. On the phone, open it from the browser or the Files app.</span></li>
-            <li><span>If Android blocks it, allow installs from that app. The phone calls these “unknown apps.”</span></li>
-            <li><span>Play Protect may warn you because this is not the Play Store. Curio is a direct install from this page.</span></li>
-            <li><span>Open Curio. The consent screen comes before any permission. The checkbox is required.</span></li>
-            <li><span>Allow exact alarms if you want the minute you set, not “sometime soon.”</span></li>
-          </ol>
-          <aside class="note">
-            <h3>If it will not install</h3>
-            <p>Uninstall the older Curio Alarm first. These builds are not always signed with the same key, and Android refuses the update when the signature changes.</p>
-            <p>Package name <code>com.aftab.curioalarm</code>. Android 8.0 or newer.</p>
-            <p class="hash">SHA-256 <code id="sha">—</code></p>
-            <p style="margin-top:16px"><a class="btn" href="downloads/CurioAlarm.apk" download="CurioAlarm.apk">Download APK</a></p>
-          </aside>
+        <div class="install-row">
+          <a class="btn lg" href="downloads/CurioAlarm.apk" download="CurioAlarm.apk">Download for Android</a>
         </div>
-        <details>
-          <summary>Replacing the APK</summary>
-          <p>Put the file at <code>docs/downloads/CurioAlarm.apk</code>. Keep that exact name. The button is a relative link to <code>downloads/CurioAlarm.apk</code> and does not need an edit. <code>dist/CurioAlarm-debug.apk</code> is not what the site serves. Commit the file, and publish the <code>docs</code> folder if you use GitHub Pages.</p>
-        </details>
+        <p class="fineprint">If the phone says the package conflicts, uninstall the previous Curio Alarm first. These builds are not always signed with the same key.</p>
+        <p class="hash" id="sha"></p>
       </div>
     </section>
   </main>
@@ -831,7 +733,7 @@
   </footer>
 
   <div class="dock">
-    <a class="btn" href="downloads/CurioAlarm.apk" download="CurioAlarm.apk">Download APK</a>
+    <a class="btn" href="downloads/CurioAlarm.apk" download="CurioAlarm.apk">Download for Android</a>
   </div>
 
   <script>
@@ -848,11 +750,7 @@
         themeBtn.textContent = dark ? "Light" : "Dark";
         themeBtn.setAttribute("aria-pressed", dark ? "true" : "false");
       }
-
-      var saved = null;
-      try { saved = localStorage.getItem("curio-theme"); } catch (e) {}
-      var systemDark = window.matchMedia && window.matchMedia("(prefers-color-scheme: dark)").matches;
-      applyTheme(saved === "light" || saved === "dark" ? saved : (systemDark ? "dark" : "light"));
+      applyTheme(root.getAttribute("data-theme") === "dark" ? "dark" : "light");
       themeBtn.addEventListener("click", function () {
         applyTheme(root.getAttribute("data-theme") === "dark" ? "light" : "dark");
       });
@@ -862,10 +760,7 @@
         var time = d.toLocaleTimeString([], { hour: "numeric", minute: "2-digit" });
         document.querySelectorAll("[data-clock]").forEach(function (el) { el.textContent = time; });
         var hour = d.getHours();
-        var hello = hour >= 5 && hour <= 11 ? "Good morning"
-          : hour <= 16 ? "Good afternoon"
-          : hour <= 20 ? "Good evening"
-          : "Good night";
+        var hello = hour >= 5 && hour <= 11 ? "Good morning" : hour <= 16 ? "Good afternoon" : hour <= 20 ? "Good evening" : "Good night";
         var greet = document.getElementById("greet");
         if (greet) greet.textContent = hello;
         var dateEl = document.getElementById("date");
@@ -891,7 +786,6 @@
         status.textContent = text;
         status.classList.toggle("bad", !!bad);
       }
-
       function pressPower() {
         if (solved) {
           setStatus("Already solved. Ring again if you want another try.");
@@ -909,7 +803,6 @@
           setStatus(roasts[(tries - 1) % roasts.length]);
         }, 420);
       }
-
       document.getElementById("power").addEventListener("click", pressPower);
       document.getElementById("power-text").addEventListener("click", pressPower);
 
@@ -945,7 +838,6 @@
         document.getElementById("reset").hidden = false;
         setStatus("That was the product. The download is the real one.");
       }
-
       document.getElementById("reset").addEventListener("click", function () {
         solved = false;
         attempts = 0;
@@ -960,40 +852,35 @@
         document.getElementById("ringing").hidden = false;
         document.getElementById("reset").hidden = true;
         document.querySelectorAll("[data-quick]").forEach(function (el) { el.classList.remove("on"); });
-        setStatus("Still ringing. Press power. It comes back.");
+        setStatus("Press power. It comes back.");
       });
-
       document.querySelectorAll("[data-quick]").forEach(function (el) {
         el.addEventListener("click", function () {
           document.querySelectorAll("[data-quick]").forEach(function (other) { other.classList.remove("on"); });
           el.classList.add("on");
-          setStatus("Preview only. Quick alarms are set inside the app.");
+          setStatus("Preview only. Quick alarms are set in the app.");
         });
       });
 
-      function markMissing() {
-        var el = document.getElementById("missing");
-        if (el) el.classList.add("show");
-      }
-
       fetch("downloads/CurioAlarm.apk", { method: "HEAD" }).then(function (res) {
-        if (!res.ok) { markMissing(); return; }
+        if (!res.ok) {
+          document.getElementById("unavailable").classList.add("show");
+          return;
+        }
         var bytes = Number(res.headers.get("content-length"));
         if (!bytes) return;
-        var label = (bytes / 1048576).toFixed(1) + " MB";
-        document.querySelectorAll("[data-size]").forEach(function (el) {
-          el.textContent = el.textContent.trim() === "" ? " · " + label : label;
-        });
+        var label = " · " + (bytes / 1048576).toFixed(1) + " MB";
+        document.querySelectorAll("[data-size]").forEach(function (el) { el.textContent = label; });
       }).catch(function () {});
 
       fetch("downloads/CurioAlarm.apk.sha256").then(function (res) {
-        if (!res.ok) return;
+        if (!res.ok) return res;
         return res.text();
       }).then(function (text) {
-        if (!text) return;
-        var hash = text.trim().split(/\s+/)[0];
+        if (!text || text.status) return;
+        var hash = String(text).trim().split(/\s+/)[0];
         var el = document.getElementById("sha");
-        if (el && hash) el.textContent = hash;
+        if (el && hash) el.textContent = "SHA-256  " + hash;
       }).catch(function () {});
     })();
   </script>
