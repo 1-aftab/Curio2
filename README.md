@@ -4,6 +4,18 @@ A minimal black-and-white Android clock that only stops ringing when you wake yo
 brain up: every alarm is dismissed by solving a **math**, **memory**, or **phrase** challenge.
 Four sections via bottom navigation: **Alarms · Stopwatch · Timer · Settings**.
 
+## Website
+
+The download site is [`docs/index.html`](docs/index.html). The Download button serves one file, and only that file:
+
+```
+docs/downloads/CurioAlarm.apk
+```
+
+Put the APK at that path with that exact name. Do not rename it, and do not point the button at `dist/`. Replacing the file is enough — the link is `downloads/CurioAlarm.apk` relative to the site. `dist/CurioAlarm-debug.apk` is the CI copy; copy it into `docs/downloads/CurioAlarm.apk` when you want the site to serve the same build.
+
+GitHub Pages: Settings → Pages → Deploy from a branch → `main` → `/docs`. The site is then `https://1-aftab.github.io/Curio2/` and the button downloads `https://1-aftab.github.io/Curio2/downloads/CurioAlarm.apk`.
+
 ## Features
 
 - **Challenges to dismiss** — arithmetic, sequence memory, or exact phrase typing, each with

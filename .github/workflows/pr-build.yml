@@ -59,7 +59,8 @@ jobs:
 
       # Actions artifact storage for this account is full (other repos). Do not upload
       # artifacts. Commit the debug APK onto the PR branch instead so it can be installed
-      # from the repo. [skip ci] keeps that commit from starting another run.
+      # from the repo, and copy it to docs/downloads/CurioAlarm.apk so the site
+      # Download button serves the same build. [skip ci] keeps that commit from starting another run.
       - name: Publish debug APK onto the branch
         if: github.event_name == 'pull_request'
         run: |
@@ -72,9 +73,11 @@ jobs:
           rm -f build.log
           git fetch origin "${{ github.head_ref }}:${{ github.head_ref }}"
           git checkout "${{ github.head_ref }}"
-          mkdir -p dist
+          mkdir -p dist docs/downloads
           cp "$RUNNER_TEMP/apk/CurioAlarm-debug.apk" dist/CurioAlarm-debug.apk
-          git add -f dist/CurioAlarm-debug.apk
+          cp "$RUNNER_TEMP/apk/CurioAlarm-debug.apk" docs/downloads/CurioAlarm.apk
+          sha256sum docs/downloads/CurioAlarm.apk > docs/downloads/CurioAlarm.apk.sha256
+          git add -f dist/CurioAlarm-debug.apk docs/downloads/CurioAlarm.apk docs/downloads/CurioAlarm.apk.sha256
           if git diff --cached --quiet; then
             echo "APK unchanged"
             exit 0
